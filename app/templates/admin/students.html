@@ -1,0 +1,62 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Students — EDUNOVA AI Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Control</p>
+    <h1>Students</h1>
+    <p>Search and review student accounts across the cohort.</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-glass">Dashboard</a>
+</div>
+
+<article class="glass-card mb-2">
+  <form method="get" action="{{ url_for('admin.students') }}" class="form-row" style="align-items:end;">
+    <div class="form-group mb-0" style="flex:1;">
+      <label class="form-label" for="q">Search</label>
+      <input class="form-control" type="search" id="q" name="q" value="{{ q or '' }}" placeholder="Name or email…">
+    </div>
+    <div class="form-group mb-0">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+</article>
+
+<article class="glass-card">
+  {% if students %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Onboarding</th>
+          <th>Joined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td><strong>{{ s.name or '—' }}</strong></td>
+          <td>{{ s.email }}</td>
+          <td>
+            {% set pct = s.profile.onboarding_pct if s.profile else 0 %}
+            <div class="progress-track" style="min-width:80px;"><div class="progress-fill" style="width:{{ pct }}%"></div></div>
+          </td>
+          <td>{{ s.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h3>No students found</h3>
+    <p>{% if q %}Try a different search.{% else %}Students will appear here after registration.{% endif %}</p>
+    <span class="demo-badge">Demo Preview</span>
+  </div>
+  {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Dashboard — EDUNOVA AI{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+{% set components = readiness.components if readiness and readiness.components is defined else {} %}
+{% set overall = readiness.overall if readiness else none %}
+{% set top_career = top_roles[0] if top_roles else none %}
+{% set intel_overall = intelligence_score.overall if intelligence_score is defined and intelligence_score else none %}
+{% set biggest_gap = biggest_gap if biggest_gap is defined else none %}
+{% set next_actions = next_actions if next_actions is defined else none %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Overview</p>
+    <h1>Hello{% if current_user and current_user.name %}, {{ current_user.name.split()[0] }}{% endif %}</h1>
+    <p>Your placement readiness at a glance — act on the next best moves.</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('intelligence.readiness_center') }}" class="btn btn-ai">My readiness</a>
+    <a href="{{ url_for('student.onboarding') }}" class="btn btn-glass">Update profile</a>
+  </div>
+</div>
+
+<div class="grid grid-4 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Overall readiness</div>
+    <div class="stat-value">{{ '%.0f'|format(overall) if overall is not none else '—' }}</div>
+    <div class="progress-track mt-2">
+      <div class="progress-fill" style="width: {{ overall|default(0) }}%"></div>
+    </div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Intelligence score</div>
+    <div class="stat-value text-primary">
+      {% if intel_overall is not none %}{{ '%.0f'|format(intel_overall) }}{% else %}—{% endif %}
+    </div>
+    <a href="{{ url_for('intelligence.intelligence_score') }}" class="btn btn-sm btn-glass mt-2">Breakdown</a>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Top career</div>
+    <div class="stat-value" style="font-size:1.2rem;">
+      {{ top_career.role_name if top_career else '—' }}
+    </div>
+    {% if top_career %}
+      <span class="badge badge-ai mt-1">{{ '%.0f'|format(top_career.match_pct) }}% fit</span>
+    {% endif %}
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Biggest gap</div>
+    <div class="stat-value" style="font-size:1.05rem;">
+      {% if biggest_gap %}
+        {% if biggest_gap is mapping %}{{ biggest_gap.skill_name or biggest_gap.name or biggest_gap.skill }}{% else %}{{ biggest_gap }}{% endif %}
+      {% else %}—{% endif %}
+    </div>
+    <a href="{{ url_for('student.skill_gap') }}" class="btn btn-sm btn-glass mt-2">Skill gap</a>
+  </article>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header">
+      <div>
+        <h3>Readiness breakdown</h3>
+        <p class="mb-0" style="font-size:0.85rem;">Component scores (0–100)</p>
+      </div>
+    </div>
+    <div class="chart-container" style="min-height:280px;">
+      <canvas
+        id="readinessChart"
+        data-chart="radar"
+        data-chart-payload='{{ {
+          "labels": ["Academic", "Skill", "Project", "Experience", "Certification", "Interview"],
+          "datasets": [{
+            "label": "Readiness",
+            "data": [
+              components.get("academic", 0) if components is mapping else 0,
+              components.get("skill", 0) if components is mapping else 0,
+              components.get("project", 0) if components is mapping else 0,
+              components.get("experience", 0) if components is mapping else 0,
+              components.get("certification", 0) if components is mapping else 0,
+              components.get("interview", 0) if components is mapping else 0
+            ],
+            "fill": true,
+            "backgroundColor": "rgba(56,189,248,0.15)",
+            "borderColor": "#38bdf8"
+          }]
+        }|tojson }}'></canvas>
+    </div>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header">
+      <h3>Next actions</h3>
+    </div>
+    <ul class="action-list">
+      {% if next_actions %}
+        {% for action in next_actions %}
+        <li>
+          <span class="step">{{ loop.index }}</span>
+          <div>
+            <strong>{{ action.title if action is mapping else action }}</strong>
+            {% if action is mapping and action.detail %}
+              <p class="mb-0 text-muted" style="font-size:0.85rem;">{{ action.detail }}</p>
+            {% endif %}
+            {% if action is mapping and action.url %}
+              <a href="{{ action.url }}" class="btn btn-sm btn-glass mt-1">Open</a>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      {% else %}
+      <li>
+        <span class="step">1</span>
+        <div>
+          <strong>Run placement prediction</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">Refresh your probability with the latest profile.</p>
+          <a href="{{ url_for('student.prediction') }}" class="btn btn-sm btn-glass mt-1">Predict</a>
+        </div>
+      </li>
+      <li>
+        <span class="step">2</span>
+        <div>
+          <strong>Close a skill gap</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">Pick a target career and learn what you’re missing.</p>
+          <a href="{{ url_for('student.skill_gap') }}" class="btn btn-sm btn-glass mt-1">Skill gap</a>
+        </div>
+      </li>
+      <li>
+        <span class="step">3</span>
+        <div>
+          <strong>Explore opportunity fit</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">See company–role pairs ranked for your profile.</p>
+          <a href="{{ url_for('intelligence.opportunity_fit') }}" class="btn btn-sm btn-glass mt-1">Opportunity fit</a>
+        </div>
+      </li>
+      {% endif %}
+    </ul>
+  </article>
+</div>
+
+<article class="glass-card">
+  <div class="card-header">
+    <h3>Career matches</h3>
+    <a href="{{ url_for('student.careers') }}" class="btn btn-sm btn-ghost">View all</a>
+  </div>
+  {% if top_roles %}
+    <ul class="action-list">
+      {% for c in top_roles %}
+        <li>
+          <span class="step">{{ loop.index }}</span>
+          <div class="flex-between w-full" style="flex:1;">
+            <div>
+              <strong>{{ c.role_name }}</strong>
+              {% if c.category %}<p class="mb-0 text-muted" style="font-size:0.82rem;">{{ c.category }}</p>{% endif %}
+            </div>
+            <span class="badge badge-ai">{{ '%.0f'|format(c.match_pct) }}%</span>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">
+      <h3>No matches yet</h3>
+      <p>Add skills in onboarding to unlock ranked career fits.</p>
+      <span class="demo-badge">Demo Preview</span>
+    </div>
+  {% endif %}
+  <div class="card-footer btn-group">
+    <a href="{{ url_for('student.analytics') }}" class="btn btn-sm btn-glass">Analytics</a>
+    <a href="{{ url_for('student.report') }}" class="btn btn-sm btn-ai">Download PDF report</a>
+  </div>
+</article>
+{% endblock %}

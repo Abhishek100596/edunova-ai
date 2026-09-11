@@ -1,0 +1,92 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}Company Intelligence — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Intelligence</p>
+    <h1>Company Intelligence</h1>
+    <p>Explore {{ companies|length }} catalog companies. Compatibility estimates only — not live openings.</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('intelligence.opportunity_fit') }}" class="btn btn-ai">Opportunity fit</a>
+    <a href="{{ url_for('intelligence.dream_company') }}" class="btn btn-glass">Dream company</a>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<form method="get" class="glass-card mb-2 form-row" style="align-items:end;">
+  <div class="form-group mb-0" style="flex:1;">
+    <label class="form-label" for="q">Search companies</label>
+    <input class="form-control" id="q" name="q" value="{{ q or '' }}" placeholder="Name, industry, type…">
+  </div>
+  <button class="btn btn-primary" type="submit">Search</button>
+</form>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Track a company</h3></div>
+  <form method="post" class="grid grid-2">
+    {{ track_form.hidden_tag() }}
+    <div class="form-group">
+      <label class="form-label" for="company_id">Catalog company (optional)</label>
+      <select class="form-select" id="company_id" name="company_id">
+        <option value="">— Custom name below —</option>
+        {% for c in companies[:200] %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">{{ track_form.company_name.label(class_="form-label") }}{{ track_form.company_name(class_="form-control") }}</div>
+    <div class="form-group">{{ track_form.target_role.label(class_="form-label") }}{{ track_form.target_role(class_="form-control") }}</div>
+    <div class="form-group">{{ track_form.location.label(class_="form-label") }}{{ track_form.location(class_="form-control") }}</div>
+    <div class="form-group">{{ track_form.status.label(class_="form-label") }}{{ track_form.status(class_="form-select") }}</div>
+    <div class="form-group">{{ track_form.notes.label(class_="form-label") }}{{ track_form.notes(class_="form-textarea", rows="2") }}</div>
+    <div class="form-group" style="align-self:end;">{{ track_form.submit(class_="btn btn-ai") }}</div>
+  </form>
+  {% if tracked %}
+    <div class="card-footer">
+      <strong>Your tracked companies</strong>
+      <ul class="action-list mt-1">
+        {% for t in tracked %}
+          <li>
+            <span class="step">•</span>
+            <div>{{ t.company.name if t.company else t.company_name }} · {{ t.target_role or '—' }} · <span class="badge">{{ t.status }}</span></div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+</article>
+
+{% if companies %}
+<div class="grid grid-2 mt-2">
+  {% for c in companies %}
+  <article class="glass-card">
+    <div class="card-header">
+      <div>
+        {% if c.company_type %}<p class="eyebrow mb-0">{{ c.company_type }}{% if c.industry %} · {{ c.industry }}{% endif %}</p>{% endif %}
+        <h3 class="mb-0">{{ c.name }}</h3>
+      </div>
+      {% if c.competitiveness %}<span class="badge badge-ai">{{ c.competitiveness }} competition</span>{% endif %}
+    </div>
+    {% if c.headquarters %}<p class="text-muted" style="font-size:0.85rem;">{{ c.headquarters }}</p>{% endif %}
+    {% if c.description %}<p style="font-size:0.88rem;">{{ c.description[:180] }}{% if c.description|length > 180 %}…{% endif %}</p>{% endif %}
+    <div class="card-footer btn-group">
+      <a href="{{ url_for('intelligence.dream_company') }}?company_id={{ c.id }}" class="btn btn-sm btn-ai">Analyze fit</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="glass-card empty-state mt-2">
+  <h3>No companies loaded</h3>
+  <p>Run <code>python scripts/seed_demo_data.py</code> to load the company catalog.</p>
+  <a class="btn btn-primary" href="{{ url_for('student.dashboard') }}">Back to dashboard</a>
+</div>
+{% endif %}
+{% endblock %}

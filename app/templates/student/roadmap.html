@@ -1,0 +1,102 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Learning Roadmap — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">AI tools</p>
+    <h1>Learning roadmap</h1>
+    <p>A sequenced plan generated from your skill gaps for a target role.</p>
+  </div>
+</div>
+
+<article class="glass-card mb-2">
+  <form method="post" data-loading class="form-row" style="align-items:end;">
+    {{ gen_form.hidden_tag() }}
+    <div class="form-group mb-0" style="flex:1;">
+      <label class="form-label" for="role_id">Generate for role</label>
+      <select class="form-select" id="role_id" name="role_id" required>
+        {% for r in roles %}
+          <option value="{{ r.id }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <button type="submit" class="btn btn-ai" name="generate" value="1" data-loading-text="Generating…">Generate / refresh</button>
+    </div>
+  </form>
+</article>
+
+{% if active and summary %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <div>
+      <h3 class="mb-0">{{ active.title }}</h3>
+      {% if active.description %}<p class="mb-0 mt-1">{{ active.description }}</p>{% endif %}
+    </div>
+    <span class="badge badge-ai">{{ '%.0f'|format(summary.progress_pct if summary.progress_pct is defined else active.progress_pct|default(0)) }}% done</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" style="width: {{ summary.progress_pct if summary.progress_pct is defined else active.progress_pct|default(0) }}%"></div></div>
+</article>
+
+<article class="glass-card mb-2">
+  <div class="roadmap-timeline">
+    {% set tasks = summary.tasks if summary.tasks is defined else (active.tasks if active.tasks is defined else []) %}
+    {% if tasks %}
+      {% for t in tasks %}
+        <div class="roadmap-item">
+          <div class="flex-between gap-2">
+            <div>
+              <strong style="color:var(--text-primary)">{{ t.title }}</strong>
+              {% if t.description %}<p class="mb-0 mt-1" style="font-size:0.88rem;">{{ t.description }}</p>{% endif %}
+              {% if t.estimated_hours %}<span class="form-hint">~{{ t.estimated_hours }}h</span>{% endif %}
+            </div>
+            <span class="badge {% if t.status == 'completed' %}badge-success{% elif t.status == 'in_progress' %}badge-ai{% endif %}">{{ t.status|replace('_',' ') }}</span>
+          </div>
+          <form method="post" class="mt-1 form-row" style="align-items:end;max-width:420px;" data-loading>
+            {{ task_form.hidden_tag() }}
+            <input type="hidden" name="task_id" value="{{ t.id }}">
+            <div class="form-group mb-0">
+              <select class="form-select" name="status">
+                <option value="not_started" {% if t.status == 'not_started' %}selected{% endif %}>Not started</option>
+                <option value="in_progress" {% if t.status == 'in_progress' %}selected{% endif %}>In progress</option>
+                <option value="completed" {% if t.status == 'completed' %}selected{% endif %}>Completed</option>
+              </select>
+            </div>
+            <div class="form-group mb-0">
+              <button type="submit" class="btn btn-sm btn-glass" name="update_task" value="1" data-loading-text="Updating…">Update</button>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">No tasks on this roadmap yet.</p>
+    {% endif %}
+  </div>
+</article>
+{% else %}
+<div class="glass-card empty-state mb-2">
+  <h3>No roadmap yet</h3>
+  <p>Generate one from skill gaps for a career you care about.</p>
+  <span class="demo-badge">Demo Preview</span>
+</div>
+{% endif %}
+
+{% if all_maps %}
+<article class="glass-card">
+  <div class="card-header"><h3>Your roadmaps</h3></div>
+  <ul class="action-list">
+    {% for rm in all_maps %}
+      <li>
+        <span class="step">{{ loop.index }}</span>
+        <div class="flex-between w-full">
+          <strong>{{ rm.title }}</strong>
+          <a href="{{ url_for('student.roadmap', roadmap_id=rm.id) }}" class="btn btn-sm btn-glass">Open</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</article>
+{% endif %}
+{% endblock %}

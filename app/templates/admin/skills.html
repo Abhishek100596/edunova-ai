@@ -1,0 +1,41 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Skills — EDUNOVA AI Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Catalog</p>
+    <h1>Skills</h1>
+    <p>Maintain the skill catalog used for matching and gap analysis.</p>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Add / update skill</h3></div>
+    <form method="post" data-loading>
+      {{ form.hidden_tag() }}
+      <div class="form-group">{{ form.name.label(class_="form-label") }}{{ form.name(class_="form-control") }}</div>
+      <div class="form-group">{{ form.category.label(class_="form-label") }}{{ form.category(class_="form-control", placeholder="e.g. technical") }}</div>
+      {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+    </form>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Catalog ({{ skills|length }})</h3></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Category</th></tr></thead>
+        <tbody>
+          {% for s in skills %}
+          <tr><td>{{ s.name }}</td><td>{{ s.category or '—' }}</td></tr>
+          {% else %}
+          <tr><td colspan="2" class="text-muted">No skills yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</div>
+{% endblock %}

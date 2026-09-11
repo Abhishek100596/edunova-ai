@@ -1,0 +1,132 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Skill Gap — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Career intelligence</p>
+    <h1>Skill gap analysis</h1>
+    <p>Compare your skills to a target role and see exactly what to learn next.</p>
+  </div>
+</div>
+
+<article class="glass-card mb-2">
+  <form method="post" data-loading class="form-row" style="align-items:end;">
+    {{ form.hidden_tag() }}
+    <div class="form-group mb-0" style="flex:1;">
+      <label class="form-label" for="role_id">Target role</label>
+      <select class="form-select" id="role_id" name="role_id" required>
+        <option value="">Select a career role…</option>
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if form.role_id.data == r.id %}selected{% endif %}>{{ r.name }}{% if r.category %} · {{ r.category }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Analyzing…"}) }}
+    </div>
+  </form>
+</article>
+
+{% if analysis %}
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Coverage · {{ analysis.role_name }}</div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(analysis.coverage_pct) }}%</div>
+    <div class="progress-track mt-2"><div class="progress-fill" style="width: {{ analysis.coverage_pct }}%"></div></div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Skills met</div>
+    <div class="stat-value">{{ analysis.met_count }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Gaps to close</div>
+    <div class="stat-value">{{ analysis.gap_count }}</div>
+  </article>
+</div>
+
+<div class="grid grid-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Missing / below target</h3></div>
+    {% if analysis.gaps %}
+      <ul class="action-list">
+        {% for g in analysis.gaps %}
+          <li>
+            <span class="step">{{ loop.index }}</span>
+            <div class="w-full">
+              <div class="flex-between">
+                <strong>{{ g.skill_name }}</strong>
+                <span class="badge badge-danger">{{ g.status }}</span>
+              </div>
+              <p class="mb-0 text-muted" style="font-size:0.82rem;">Level {{ g.current_level }} → {{ g.required_level }}</p>
+              <div class="progress-track mt-1">
+                <div class="progress-fill" style="width: {{ ((g.current_level / g.required_level) * 100) if g.required_level else 0 }}%"></div>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer">
+        <a href="{{ url_for('student.roadmap') }}" class="btn btn-ai btn-sm">Generate roadmap</a>
+      </div>
+    {% else %}
+      <p class="mb-0 text-success">No gaps — you meet or exceed requirements.</p>
+    {% endif %}
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Already strong</h3></div>
+    {% if analysis.met %}
+      {% for m in analysis.met %}
+        <span class="skill-pill gap-have">{{ m.skill_name }} · L{{ m.current_level }}</span>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No met skills to show for this role yet.</p>
+    {% endif %}
+  </article>
+</div>
+
+{% if matrix and matrix.matrix %}
+<article class="glass-card mt-2">
+  <div class="card-header">
+    <h3>Skill Gap Matrix</h3>
+    <span class="badge badge-ai">Weighted coverage {{ '%.0f'|format(matrix.weighted_coverage_pct or 0) }}%</span>
+  </div>
+  <p class="text-muted" style="font-size:0.85rem;">{{ matrix.disclaimer }}</p>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Skill</th>
+          <th>Required</th>
+          <th>Current</th>
+          <th>Gap</th>
+          <th>Importance</th>
+          <th>Evidence</th>
+          <th>Priority</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in matrix.matrix %}
+        <tr>
+          <td>{{ row.skill_name }}</td>
+          <td>{{ row.required_level }}</td>
+          <td>{% if row.current_level > 0 %}{{ row.current_level }}{% else %}—{% endif %}</td>
+          <td>{{ row.gap_level }}</td>
+          <td><span class="badge">{{ row.importance_band }}</span></td>
+          <td style="font-size:0.8rem;">{{ row.confidence_label }}{% if row.evidence %} · {{ row.evidence[0] }}{% endif %}</td>
+          <td><span class="badge {% if row.priority == 'Critical' %}badge-danger{% elif row.priority == 'High' %}badge-ai{% endif %}">{{ row.priority }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endif %}
+{% else %}
+<div class="glass-card empty-state">
+  <h3>Pick a target role</h3>
+  <p>Select a career above to see missing skills, levels, and coverage.</p>
+</div>
+{% endif %}
+{% endblock %}

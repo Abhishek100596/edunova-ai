@@ -1,0 +1,106 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Placement Prediction — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+{% set prob = result.probability if result else none %}
+{% set prob_pct = (prob * 100) if prob is not none else none %}
+{% set positives = result.factors_positive if result else [] %}
+{% set negatives = result.factors_negative if result else [] %}
+{% set meta = result.model_meta if result else {} %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Career intelligence</p>
+    <h1>Placement prediction</h1>
+    <p>Deterministic estimate from your profile signals — with factor-level explainability.</p>
+  </div>
+  <form method="post" action="{{ url_for('student.prediction') }}" data-loading>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-ai" data-loading-text="Running model…">Run / refresh prediction</button>
+  </form>
+</div>
+
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Placement probability</div>
+    <div class="stat-value text-primary">{% if prob_pct is not none %}{{ '%.0f'|format(prob_pct) }}%{% else %}—{% endif %}</div>
+    <div class="progress-track mt-2"><div class="progress-fill" style="width: {{ prob_pct|default(0) }}%"></div></div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Readiness (model)</div>
+    <div class="stat-value">{% if result and result.readiness is defined %}{{ '%.0f'|format(result.readiness) }}{% else %}—{% endif %}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Model</div>
+    <div class="stat-value" style="font-size:1rem;">{{ meta.get('model_name', meta.get('source', '—')) if meta else '—' }}</div>
+  </article>
+</div>
+
+{% if result %}
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Positive factors</h3><span class="badge badge-success">Strengths</span></div>
+    {% if positives %}
+      {% for f in positives %}
+        <div class="factor-row">
+          <span>{{ f.label if f.label is defined else f.get('label', f.get('feature', 'Factor')) }}</span>
+          <span class="text-success">{{ f.contribution if f.contribution is defined else f.get('contribution', '') }}</span>
+          <div class="factor-bar"><span style="width: {{ [(f.contribution|abs * 40) if f.contribution is defined else 40, 100]|min }}%"></span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No positive factors listed.</p>
+    {% endif %}
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Negative factors</h3><span class="badge badge-danger">Gaps</span></div>
+    {% if negatives %}
+      {% for f in negatives %}
+        <div class="factor-row">
+          <span>{{ f.label if f.label is defined else f.get('label', f.get('feature', 'Factor')) }}</span>
+          <span class="text-danger">{{ f.contribution if f.contribution is defined else f.get('contribution', '') }}</span>
+          <div class="factor-bar"><span style="width:40%;background:linear-gradient(135deg,#dc2626,#f87171);"></span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No negative factors listed.</p>
+    {% endif %}
+  </article>
+</div>
+{% else %}
+<div class="glass-card empty-state mb-2">
+  <h3>No prediction yet</h3>
+  <p>Run the model to see probability and explainability factors.</p>
+  <span class="demo-badge">Demo Preview</span>
+</div>
+{% endif %}
+
+{% if history %}
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Recent runs</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>When</th><th>Probability</th><th>Readiness</th></tr></thead>
+      <tbody>
+        {% for h in history %}
+        <tr>
+          <td>{{ h.created_at }}</td>
+          <td>{{ '%.0f'|format(h.probability * 100) }}%</td>
+          <td>{{ '%.0f'|format(h.readiness) if h.readiness is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endif %}
+
+<div class="disclaimer">
+  <strong>Model disclaimer:</strong>
+  Placement probability is an estimate from academic, skill, project, and experience signals.
+  It is <em>not</em> a guarantee of offers. Models may be trained on synthetic or limited data.
+  <a href="{{ url_for('student.explain') }}">View feature explainability →</a>
+</div>
+{% endblock %}

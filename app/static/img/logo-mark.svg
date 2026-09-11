@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EDUNOVA AI symbol">
+  <defs>
+    <linearGradient id="eduMarkBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B1F33"/>
+      <stop offset="55%" stop-color="#0E7490"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="eduMarkAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#67E8F9"/>
+      <stop offset="100%" stop-color="#A5F3FC"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded tile -->
+  <rect width="64" height="64" rx="14" fill="url(#eduMarkBg)"/>
+  <!-- Open book base -->
+  <path d="M12 40c6-8 12-10 20-10s14 2 20 10v2c-7-6-13-8-20-8s-13 2-20 8v-2z" fill="url(#eduMarkAccent)" opacity="0.95"/>
+  <path d="M32 30v20" stroke="#04101A" stroke-width="1.6" stroke-linecap="round" opacity="0.35"/>
+  <!-- Upward growth stem -->
+  <path d="M32 42V18" stroke="#ECFEFF" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Neural nodes -->
+  <circle cx="32" cy="16" r="3.2" fill="#ECFEFF"/>
+  <circle cx="22" cy="22" r="2.4" fill="#A5F3FC"/>
+  <circle cx="42" cy="22" r="2.4" fill="#A5F3FC"/>
+  <circle cx="18" cy="30" r="2" fill="#67E8F9"/>
+  <circle cx="46" cy="30" r="2" fill="#67E8F9"/>
+  <circle cx="26" cy="26" r="1.6" fill="#ECFEFF"/>
+  <circle cx="38" cy="26" r="1.6" fill="#ECFEFF"/>
+  <!-- Neural links -->
+  <path d="M32 16L22 22M32 16L42 22M22 22L18 30M42 22L46 30M22 22L26 26M42 22L38 26M26 26L32 30M38 26L32 30" stroke="#ECFEFF" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+</svg>

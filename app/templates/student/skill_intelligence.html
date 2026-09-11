@@ -1,0 +1,52 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import fit_badge, compat_note %}
+
+{% block title %}Skill Intelligence — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Intelligence</p>
+    <h1>Skill Intelligence</h1>
+    <p>Confidence scores from declared levels plus portfolio, certification, and interview evidence.</p>
+  </div>
+  <a href="{{ url_for('intelligence.intelligence_score') }}" class="btn btn-ai">Intelligence score</a>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+{% if skills %}
+<div class="grid grid-2 mt-2">
+  {% for s in skills %}
+  <article class="glass-card">
+    <div class="card-header">
+      <div>
+        <h3 class="mb-0">{{ s.skill }}</h3>
+        <p class="mb-0 text-muted" style="font-size:0.85rem;">Level {{ s.level }}/5</p>
+      </div>
+      {% if s.label %}{{ fit_badge(s.label) }}{% endif %}
+    </div>
+    <div class="stat-value" style="font-size:1.5rem;">{{ '%.0f'|format((s.confidence or 0) * 100) }}%</div>
+    <div class="progress-track mt-1 mb-2">
+      <div class="progress-fill" style="width: {{ (s.confidence or 0) * 100 }}%"></div>
+    </div>
+    {% if s.evidence_bits %}
+      <ul class="action-list">
+        {% for bit in s.evidence_bits %}
+          <li><span class="step">·</span><div>{{ bit }}</div></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="glass-card empty-state mt-2">
+  <h3>No skill confidence yet</h3>
+  <p>Add skills in onboarding or profile to unlock evidence-backed confidence scores.</p>
+  <a href="{{ url_for('student.onboarding') }}" class="btn btn-primary mt-2">Complete onboarding</a>
+</div>
+{% endif %}
+{% endblock %}

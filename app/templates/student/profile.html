@@ -1,0 +1,88 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Profile — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Profile</h1>
+    <p>Manage identity, academics, and career preferences.</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('student.onboarding') }}" class="btn btn-glass">Onboarding</a>
+    <a href="{{ url_for('student.theme') }}" class="btn btn-ai">Theme</a>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Edit profile</h3></div>
+    <form method="post" data-loading>
+      {{ form.hidden_tag() }}
+      <div class="form-group">{{ form.name.label(class_="form-label") }}{{ form.name(class_="form-control") }}</div>
+      <div class="form-row">
+        <div class="form-group">{{ form.college.label(class_="form-label") }}{{ form.college(class_="form-control") }}</div>
+        <div class="form-group">{{ form.degree.label(class_="form-label") }}{{ form.degree(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ form.branch.label(class_="form-label") }}{{ form.branch(class_="form-control") }}</div>
+        <div class="form-group">{{ form.graduation_year.label(class_="form-label") }}{{ form.graduation_year(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ form.location.label(class_="form-label") }}{{ form.location(class_="form-control") }}</div>
+        <div class="form-group">{{ form.age.label(class_="form-label") }}{{ form.age(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ form.cgpa.label(class_="form-label") }}{{ form.cgpa(class_="form-control") }}</div>
+        <div class="form-group">{{ form.attendance.label(class_="form-label") }}{{ form.attendance(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ form.backlogs.label(class_="form-label") }}{{ form.backlogs(class_="form-control") }}</div>
+        <div class="form-group">{{ form.academic_consistency.label(class_="form-label") }}{{ form.academic_consistency(class_="form-control") }}</div>
+      </div>
+      <div class="form-group">{{ form.preferred_roles.label(class_="form-label") }}{{ form.preferred_roles(class_="form-control") }}</div>
+      <div class="form-group">{{ form.preferred_industries.label(class_="form-label") }}{{ form.preferred_industries(class_="form-control") }}</div>
+      <div class="form-group">{{ form.target_companies.label(class_="form-label") }}{{ form.target_companies(class_="form-control") }}</div>
+      <div class="form-group">{{ form.preferred_location.label(class_="form-label") }}{{ form.preferred_location(class_="form-control") }}</div>
+      <label class="form-check mb-2">{{ form.higher_studies() }} {{ form.higher_studies.label.text }}</label>
+      {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+    </form>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Skills on profile</h3></div>
+    {% if skills %}
+      {% for s in skills %}
+        <span class="skill-pill gap-have">
+          {{ s.skill.name if s.skill else ('#' ~ s.skill_id) }} · L{{ s.level }}
+          <a href="{{ url_for('student.profile', remove_skill=s.skill_id) }}" style="margin-left:0.35rem;opacity:0.7;" aria-label="Remove skill">×</a>
+        </span>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <p>You haven't added any skills yet.</p>
+        <a class="btn btn-sm btn-ai" href="#add-skill">Add Skills</a>
+      </div>
+    {% endif %}
+    <div class="card-footer">
+      <div class="stat-label">Onboarding</div>
+      <div class="progress-track mt-1"><div class="progress-fill" style="width: {{ profile.onboarding_pct|default(0) }}%"></div></div>
+    </div>
+  </article>
+</div>
+
+<article class="glass-card mt-2" id="add-skill">
+  <div class="card-header"><h3>Add skill</h3></div>
+  <form method="post" class="grid grid-2">
+    {{ skill_form.hidden_tag() }}
+    <div class="form-group">{{ skill_form.skill_name.label(class_="form-label") }}{{ skill_form.skill_name(class_="form-control") }}</div>
+    <div class="form-group">{{ skill_form.category.label(class_="form-label") }}{{ skill_form.category(class_="form-select") }}</div>
+    <div class="form-group">{{ skill_form.level.label(class_="form-label") }}{{ skill_form.level(class_="form-control", value=3) }}</div>
+    <div class="form-group">{{ skill_form.description.label(class_="form-label") }}{{ skill_form.description(class_="form-textarea", rows="2") }}</div>
+    <div class="form-group" style="align-self:end;">
+      <button type="submit" name="add_skill" value="1" class="btn btn-primary">{{ skill_form.submit.label.text }}</button>
+    </div>
+  </form>
+</article>
+{% endblock %}

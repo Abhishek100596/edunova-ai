@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" role="img" aria-label="EDUNOVA AI symbol">
+  <defs>
+    <linearGradient id="eduWideBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B1F33"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+    <linearGradient id="eduWideAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#67E8F9"/>
+      <stop offset="100%" stop-color="#A5F3FC"/>
+    </linearGradient>
+  </defs>
+  <!-- Symbolic-only wordmark strip: open-book + neural growth (no alphabet glyphs) -->
+  <rect x="0" y="4" width="40" height="40" rx="10" fill="url(#eduWideBg)"/>
+  <path d="M7.5 30c3.8-5 7.5-6.2 12.5-6.2S28.7 25 32.5 30v1.2c-4.4-3.8-8.1-5-12.5-5s-8.1 1.2-12.5 5V30z" fill="url(#eduWideAccent)"/>
+  <path d="M20 31.5V16" stroke="#ECFEFF" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="20" cy="15" r="2.1" fill="#ECFEFF"/>
+  <circle cx="14" cy="19" r="1.5" fill="#A5F3FC"/>
+  <circle cx="26" cy="19" r="1.5" fill="#A5F3FC"/>
+  <path d="M20 15L14 19M20 15L26 19" stroke="#ECFEFF" stroke-width="1" opacity="0.9"/>
+  <!-- Abstract knowledge waveform (no letters) -->
+  <path d="M52 24c6-10 12-10 18 0s12 10 18 0 12-10 18 0 12 10 18 0" fill="none" stroke="url(#eduWideAccent)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="52" cy="24" r="2.5" fill="#22D3EE"/>
+  <circle cx="88" cy="24" r="2.5" fill="#67E8F9"/>
+  <circle cx="124" cy="24" r="2.5" fill="#A5F3FC"/>
+  <circle cx="148" cy="24" r="2.5" fill="#ECFEFF"/>
+</svg>

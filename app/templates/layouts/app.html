@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block body_class %}app-body{% endblock %}
+
+{% macro nav_link(endpoint, label, icon, also=none) -%}
+  {% set active = (request.endpoint == endpoint) or (also and request.endpoint in also) %}
+  <a href="{{ url_for(endpoint) }}"
+     class="nav-link{% if active %} active{% endif %}"
+     {% if active %}aria-current="page"{% endif %}>
+    <span class="nav-icon" aria-hidden="true">{{ icon|safe }}</span>
+    <span>{{ label }}</span>
+  </a>
+{%- endmacro %}
+
+{% block body %}
+<div class="app-shell" id="app-shell">
+  <aside class="sidebar" id="app-sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="32" height="32">
+      <span class="sidebar-brand-text">EDUNOVA AI</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Overview</div>
+        {{ nav_link('student.dashboard', 'Dashboard', '▣') }}
+        {{ nav_link('student.profile', 'Profile', '◎') }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Intelligence</div>
+        {{ nav_link('intelligence.readiness_center', 'My Readiness', '◈', also=['student.prediction', 'student.explain']) }}
+        {{ nav_link('intelligence.skill_intelligence', 'Skill Intelligence', '⬡') }}
+        {{ nav_link('student.careers', 'Career Explorer', '◇') }}
+        {{ nav_link('intelligence.companies', 'Company Intelligence', '▣') }}
+        {{ nav_link('intelligence.opportunity_fit', 'Opportunity Fit', '◎') }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Analysis Lab</div>
+        {{ nav_link('student.analytics', 'Analytics Lab', '▥') }}
+        {{ nav_link('student.skill_gap', 'Skill Gap', '⬡') }}
+        {{ nav_link('student.resume', 'Resume Analyzer', '▤') }}
+        {{ nav_link('intelligence.jd_analyzer', 'JD Analyzer', '▤') }}
+        {{ nav_link('intelligence.compare_careers', 'Career Comparison', '◇') }}
+        {{ nav_link('intelligence.compare_companies', 'Company Comparison', '▣') }}
+        {{ nav_link('intelligence.career_switch', 'Career Switch', '⇄') }}
+        {{ nav_link('intelligence.what_if', 'What-If Simulator', '⟳') }}
+        {{ nav_link('intelligence.dream_company', 'Dream Company', '★') }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Action Plan</div>
+        {{ nav_link('student.roadmap', 'Roadmap', '⇢') }}
+        {{ nav_link('student.learning', 'Learning Plan', '▤') }}
+        {{ nav_link('student.projects', 'Projects', '▣') }}
+        {{ nav_link('student.projects', 'Certifications / Experience', '◎') }}
+        {{ nav_link('intelligence.intelligence_score', 'Intelligence Score', '✦') }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Preparation</div>
+        {{ nav_link('student.coach', 'AI Coach', '✦') }}
+        {{ nav_link('student.interview', 'Interview Lab', '◉', also=['student.interview_results']) }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Reports</div>
+        {{ nav_link('student.report', 'Career Report', '📄') }}
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-label">Account</div>
+        {{ nav_link('student.notifications', 'Notifications', '◉') }}
+        {{ nav_link('student.theme', 'Settings', '◐') }}
+        <a href="{{ url_for('auth.logout') }}" class="nav-link">
+          <span class="nav-icon" aria-hidden="true">⎋</span>
+          <span>Logout</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button type="button" class="btn btn-glass btn-sm btn-block" data-sidebar-collapse>
+        <span>Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="overlay-backdrop" id="sidebar-backdrop" data-sidebar-close></div>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" class="icon-btn" data-sidebar-open aria-label="Open menu">☰</button>
+        <a href="{{ url_for('student.dashboard') }}" class="topbar-logo">
+          <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="28" height="28">
+          EDUNOVA AI
+        </a>
+      </div>
+      <div class="topbar-right">
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle theme">◐</button>
+        <a href="{{ url_for('student.profile') }}" class="profile-chip">
+          <span class="avatar">{{ (current_user.name[:1] if current_user and current_user.is_authenticated and current_user.name else 'E')|upper }}</span>
+          <span>{{ current_user.name if current_user and current_user.is_authenticated else 'Student' }}</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

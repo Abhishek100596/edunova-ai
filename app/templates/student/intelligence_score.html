@@ -1,0 +1,53 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}Intelligence Score — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Intelligence</p>
+    <h1>EDUNOVA Intelligence Score</h1>
+    <p>Weighted breakdown across academics, skills, projects, evidence, and more.</p>
+  </div>
+  <a href="{{ url_for('intelligence.readiness_center') }}" class="btn btn-glass">Readiness center</a>
+</div>
+
+{{ compat_note(score.disclaimer if score and score.disclaimer else disclaimer) }}
+
+{% if score %}
+<div class="grid grid-4 mb-2 mt-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Overall</div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(score.overall) }}</div>
+    <div class="progress-track mt-2"><div class="progress-fill" style="width: {{ score.overall }}%"></div></div>
+  </article>
+</div>
+
+<div class="grid grid-2">
+  {% for key, dim in score.dimensions.items() %}
+  <article class="glass-card">
+    <div class="card-header">
+      <h3 class="mb-0">{{ key|replace('_',' ')|title }}</h3>
+      <span class="badge badge-ai">w {{ '%.0f'|format((dim.weight or 0) * 100) }}%</span>
+    </div>
+    <div class="stat-value" style="font-size:1.4rem;">{{ '%.0f'|format(dim.score) }}</div>
+    <div class="progress-track mt-1 mb-2"><div class="progress-fill" style="width: {{ dim.score }}%"></div></div>
+    {% if dim.how_calculated %}
+      <p class="mb-0 text-muted" style="font-size:0.82rem;">{{ dim.how_calculated }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% if score.how_calculated_overall %}
+<p class="mt-2 text-muted" style="font-size:0.85rem;">{{ score.how_calculated_overall }}</p>
+{% endif %}
+{% else %}
+<div class="glass-card empty-state mt-2">
+  <h3>Score unavailable</h3>
+  <p>Complete your profile so dimensions can be calculated.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}My Readiness — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Intelligence</p>
+    <h1>My Readiness</h1>
+    <p>Placement prediction, explainability, and multi-dimension readiness in one place.</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('student.prediction') }}" class="btn btn-ai">Run prediction</a>
+    <a href="{{ url_for('student.explain') }}" class="btn btn-glass">Explain factors</a>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<div class="grid grid-3 mb-2 mt-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Overall readiness</div>
+    <div class="stat-value">{{ '%.0f'|format(readiness.overall) if readiness else '—' }}</div>
+    <div class="progress-track mt-2"><div class="progress-fill" style="width: {{ readiness.overall|default(0) }}%"></div></div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Placement probability</div>
+    <div class="stat-value text-primary">
+      {% if latest and latest.probability is not none %}{{ '%.0f'|format(latest.probability * 100) }}%{% else %}—{% endif %}
+    </div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Intelligence score</div>
+    <div class="stat-value">
+      {% if intelligence and intelligence.overall is defined %}{{ '%.0f'|format(intelligence.overall) }}{% else %}—{% endif %}
+    </div>
+    <a href="{{ url_for('intelligence.intelligence_score') }}" class="btn btn-sm btn-glass mt-2">Breakdown</a>
+  </article>
+</div>
+
+{% if readiness and readiness.components %}
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Readiness components</h3></div>
+  <div class="grid grid-2">
+    {% for name, score in readiness.components.items() %}
+      <div>
+        <div class="flex-between"><span>{{ name|title }}</span><strong>{{ '%.0f'|format(score) }}</strong></div>
+        <div class="progress-track mt-1"><div class="progress-fill" style="width: {{ score }}%"></div></div>
+      </div>
+    {% endfor %}
+  </div>
+</article>
+{% endif %}
+
+{% if history and history.points %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <h3>Readiness trend</h3>
+    {% if history.is_demo_sample %}<span class="badge">Demo / sample history</span>{% endif %}
+  </div>
+  <p class="text-muted" style="font-size:0.85rem;">{{ history.message }}</p>
+  <ul class="action-list">
+    {% for p in history.points %}
+      <li>
+        <span class="step">{{ loop.index }}</span>
+        <div class="flex-between w-full"><span>{{ p.label }}</span><strong>{{ '%.0f'|format(p.value) }}</strong></div>
+      </li>
+    {% endfor %}
+  </ul>
+</article>
+{% else %}
+<article class="glass-card mb-2 empty-state">
+  <p><strong>Not enough historical data yet.</strong></p>
+  <p class="mb-0 text-muted">Run predictions or complete roadmap tasks to build a real readiness trend.</p>
+</article>
+{% endif %}
+
+<div class="grid grid-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Prediction &amp; explain</h3></div>
+    <ul class="action-list">
+      <li>
+        <span class="step">1</span>
+        <div>
+          <strong>Placement prediction</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">Refresh probability from your latest profile.</p>
+          <a href="{{ url_for('student.prediction') }}" class="btn btn-sm btn-ai mt-1">Open</a>
+        </div>
+      </li>
+      <li>
+        <span class="step">2</span>
+        <div>
+          <strong>Factor explainability</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">See what pushed the estimate up or down.</p>
+          <a href="{{ url_for('student.explain') }}" class="btn btn-sm btn-glass mt-1">Explain</a>
+        </div>
+      </li>
+    </ul>
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Related views</h3></div>
+    <div class="btn-group" style="flex-wrap:wrap;">
+      <a href="{{ url_for('intelligence.skill_intelligence') }}" class="btn btn-sm btn-glass">Skill intelligence</a>
+      <a href="{{ url_for('student.skill_gap') }}" class="btn btn-sm btn-glass">Skill gap</a>
+      <a href="{{ url_for('intelligence.opportunity_fit') }}" class="btn btn-sm btn-glass">Opportunity fit</a>
+      <a href="{{ url_for('student.analytics') }}" class="btn btn-sm btn-glass">Analytics lab</a>
+    </div>
+  </article>
+</div>
+{% endblock %}

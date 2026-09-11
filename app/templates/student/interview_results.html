@@ -1,0 +1,67 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Interview Results — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Interview</p>
+    <h1>Session results</h1>
+    <p>Scores and coaching follow-up for this mock interview.</p>
+  </div>
+  <a href="{{ url_for('student.interview') }}" class="btn btn-glass">Back to interviews</a>
+</div>
+
+{% if detail %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <h3>Session #{{ detail.id }}</h3>
+    <span class="badge badge-ai">{{ detail.status }}</span>
+  </div>
+  <div class="grid grid-3">
+    <div class="card-solid">
+      <div class="stat-label">Overall score</div>
+      <div class="stat-value text-primary">{% if detail.overall_score is not none %}{{ '%.0f'|format(detail.overall_score) }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="card-solid">
+      <div class="stat-label">Type</div>
+      <div class="stat-value" style="font-size:1.1rem;">{{ detail.interview_type or '—' }}</div>
+    </div>
+    <div class="card-solid">
+      <div class="stat-label">Questions</div>
+      <div class="stat-value">{{ detail.questions|length if detail.questions else 0 }}</div>
+    </div>
+  </div>
+</article>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Answers</h3></div>
+  <ul class="action-list">
+    {% for q in detail.questions %}
+      <li>
+        <span class="step">{{ loop.index }}</span>
+        <div>
+          <strong>{{ q.prompt }}</strong>
+          {% if q.answer %}
+            <p class="mb-0 mt-1" style="font-size:0.9rem;color:var(--text-primary);">{{ q.answer.answer_text or q.answer.text }}</p>
+            <p class="mb-0 text-muted" style="font-size:0.82rem;">Score {{ q.answer.score }} · {{ q.answer.feedback }}</p>
+          {% else %}
+            <p class="mb-0 text-muted">No answer</p>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</article>
+{% endif %}
+
+{% if followup %}
+<article class="glass-card">
+  <div class="card-header"><h3>Coaching follow-up</h3><span class="badge badge-ai">AI</span></div>
+  <p style="color:var(--text-primary);white-space:pre-wrap;">{{ followup if followup is string else followup.summary if followup.summary is defined else followup }}</p>
+  <div class="card-footer">
+    <a href="{{ url_for('student.coach') }}" class="btn btn-ai btn-sm">Continue with coach</a>
+  </div>
+</article>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "layouts/admin.html" %}
+{% from "components/evidence_badge.html" import evidence_badge %}
+
+{% block title %}Evidence Sources — EDUNOVA AI Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Research</p>
+    <h1>Evidence Sources</h1>
+    <p>Provenance catalog for company and role intelligence.</p>
+  </div>
+</div>
+
+<article class="glass-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Publisher</th>
+          <th>Status</th>
+          <th>Official</th>
+          <th>URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in sources %}
+        <tr>
+          <td><strong>{{ e.title }}</strong></td>
+          <td>{{ e.source_type }}</td>
+          <td>{{ e.publisher or '—' }}</td>
+          <td>{{ evidence_badge(e.verification_status) }}</td>
+          <td>{{ 'Yes' if e.is_official else 'No' }}</td>
+          <td>
+            {% if e.url %}
+              <a href="{{ e.url }}" target="_blank" rel="noopener noreferrer">Open</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No evidence sources seeded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}

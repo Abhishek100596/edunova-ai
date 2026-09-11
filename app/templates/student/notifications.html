@@ -1,0 +1,46 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Notifications — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Notifications</h1>
+    <p>Updates about onboarding, predictions, and coaching.</p>
+  </div>
+</div>
+
+<article class="glass-card">
+  {% if notifications %}
+    <ul class="action-list">
+      {% for n in notifications %}
+        <li>
+          <span class="step">{% if n.is_read %}✓{% else %}●{% endif %}</span>
+          <div class="flex-between w-full gap-2">
+            <div>
+              <strong>{{ n.title }}</strong>
+              <p class="mb-0 text-muted" style="font-size:0.88rem;">{{ n.body }}</p>
+              <span class="form-hint">{{ n.created_at }} · {{ n.category }}</span>
+            </div>
+            <div class="btn-group">
+              {% if n.link %}<a href="{{ n.link }}" class="btn btn-sm btn-glass">Open</a>{% endif %}
+              {% if not n.is_read %}
+              <form method="post" action="{{ url_for('student.mark_notification_read', note_id=n.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-ghost">Mark read</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">
+      <h3>You're all caught up</h3>
+      <p>No notifications yet.</p>
+    </div>
+  {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}About — EDUNOVA AI{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+<nav class="landing-nav">
+  <a href="{{ url_for('main.landing') }}" class="landing-nav-brand">
+    <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="34" height="34">
+    EDUNOVA AI
+  </a>
+  <div class="landing-nav-actions">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-glass btn-sm">Log in</a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Start free</a>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="section-header">
+    <p class="eyebrow">About</p>
+    <h1>AI-Powered Education, Skill &amp; Career Intelligence</h1>
+    <p>EDUNOVA helps students understand placement readiness, close skill gaps, and practice with AI tools — with transparent, explainable signals.</p>
+  </div>
+  <div class="feature-grid">
+    {% for f in features %}
+    <article class="glass-card feature-card">
+      <div class="feature-icon">✦</div>
+      <h3>{{ f if f is string else f.title }}</h3>
+      {% if f is mapping and f.body %}<p class="mb-0">{{ f.body }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  <div class="hero-cta mt-3">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get started</a>
+    <a href="{{ url_for('main.landing') }}" class="btn btn-glass">Back to home</a>
+  </div>
+</section>
+{% endblock %}

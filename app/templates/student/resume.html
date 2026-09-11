@@ -1,0 +1,162 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Resume Intelligence — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% set completeness = analysis.completeness_score if analysis and analysis.completeness_score is defined else none %}
+{% set skills_found = parse_json(analysis.skills_found, []) if analysis and analysis.skills_found is defined else [] %}
+{% set sections_list = parse_json(analysis.sections_present, []) if analysis and analysis.sections_present is defined else [] %}
+{% set suggestions = parse_json(analysis.suggestions, []) if analysis and analysis.suggestions is defined else [] %}
+{% set sections = sections_list if sections_list is mapping else {} %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">AI tools</p>
+    <h1>Resume intelligence</h1>
+    <p>Upload a CV, extract skills, and see completeness plus JD fit.</p>
+  </div>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Upload resume</h3></div>
+    <form method="post" enctype="multipart/form-data" data-loading>
+      {{ upload_form.hidden_tag() }}
+      <div class="form-group">
+        {{ upload_form.resume.label(class_="form-label") }}
+        {{ upload_form.resume(class_="form-control") }}
+        <span class="form-hint">PDF or DOCX.</span>
+      </div>
+      {{ upload_form.submit(class_="btn btn-primary", **{"data-loading-text": "Analyzing…"}) }}
+    </form>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Match a job description</h3></div>
+    <form method="post" data-loading>
+      {{ jd_form.hidden_tag() }}
+      <div class="form-group">
+        {{ jd_form.title.label(class_="form-label") }}
+        {{ jd_form.title(class_="form-control") }}
+      </div>
+      <div class="form-group">
+        {{ jd_form.company.label(class_="form-label") }}
+        {{ jd_form.company(class_="form-control") }}
+      </div>
+      <div class="form-group">
+        {{ jd_form.raw_text.label(class_="form-label") }}
+        {{ jd_form.raw_text(class_="form-textarea", rows="5") }}
+      </div>
+      {{ jd_form.resume_id(class_="form-control") }}
+      <button type="submit" class="btn btn-ai" name="match" value="1" data-loading-text="Matching…">Score JD fit</button>
+    </form>
+    {% if match %}
+      <div class="card-footer">
+        <div class="stat-label">Latest match score</div>
+        <div class="stat-value text-primary">{{ '%.0f'|format(match.match_score) }}%</div>
+      </div>
+    {% endif %}
+  </article>
+</div>
+
+{% if analysis %}
+{% if intel_report %}
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Resume intelligence</div>
+    <div class="stat-value">{{ '%.0f'|format(intel_report.overall) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">ATS-style readiness</div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(intel_report.ats_style_readiness) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Role keyword match</div>
+    <div class="stat-value">{% if intel_report.role_match_pct is not none %}{{ '%.0f'|format(intel_report.role_match_pct) }}%{% else %}—{% endif %}</div>
+  </article>
+</div>
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Strengths &amp; improvements</h3></div>
+  <p class="text-muted" style="font-size:0.85rem;">{{ intel_report.label }}</p>
+  <div class="grid grid-2">
+    <div>
+      <strong>Strengths</strong>
+      <ul>{% for s in intel_report.strengths %}<li>{{ s }}</li>{% else %}<li>Keep documenting real projects.</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <strong>Improve</strong>
+      <ul>{% for s in intel_report.improve %}<li>{{ s }}</li>{% endfor %}</ul>
+      <p class="mb-0"><strong>Next:</strong> {{ intel_report.next_action }}</p>
+    </div>
+  </div>
+</article>
+{% endif %}
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Completeness</div>
+    <div class="stat-value">{% if completeness is not none %}{{ '%.0f'|format(completeness) }}{% else %}—{% endif %}</div>
+    <div class="progress-track mt-2"><div class="progress-fill" style="width: {{ completeness|default(0) }}%"></div></div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Skills detected</div>
+    <div class="stat-value">{{ skills_found|length }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Resumes on file</div>
+    <div class="stat-value">{{ resumes|length if resumes else 0 }}</div>
+  </article>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Detected skills</h3></div>
+    {% if skills_found %}
+      {% for s in skills_found %}
+        <span class="skill-pill gap-have">{{ s.name if s.name is defined else s.get('name', s) }}</span>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No catalog skills matched yet.</p>
+    {% endif %}
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Sections</h3></div>
+    {% if sections %}
+      <ul class="action-list">
+        {% for key, present in sections.items() %}
+          <li>
+            <span class="step">{% if present %}✓{% else %}·{% endif %}</span>
+            <div class="flex-between w-full">
+              <strong>{{ key|replace('_',' ')|title }}</strong>
+              <span class="badge {% if present %}badge-success{% else %}badge-warning{% endif %}">{% if present %}Present{% else %}Missing{% endif %}</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif sections_list %}
+      <div>
+        {% for s in sections_list %}
+          <span class="skill-pill gap-have">{{ s if s is string else (s.name if s.name is defined else s) }}</span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">Section detection unavailable for this analysis.</p>
+    {% endif %}
+  </article>
+</div>
+{% elif resumes %}
+<article class="glass-card">
+  <div class="card-header"><h3>Uploaded resumes</h3></div>
+  <ul class="action-list">
+    {% for r in resumes %}
+      <li><span class="step">{{ loop.index }}</span><div>{{ r.original_filename }} · {{ r.uploaded_at }}</div></li>
+    {% endfor %}
+  </ul>
+</article>
+{% else %}
+<div class="glass-card empty-state">
+  <h3>You haven't analyzed a resume yet</h3>
+  <p>Upload a PDF or DOCX to extract skills and run ATS-style heuristics.</p>
+  <a class="btn btn-primary" href="#upload">Analyze Resume</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Projects — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">AI tools</p>
+    <h1>Projects</h1>
+    <p>Showcase builds that move readiness — stack, impact, and links.</p>
+  </div>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Add project</h3></div>
+    <form method="post" data-loading>
+      {{ form.hidden_tag() }}
+      <div class="form-group">{{ form.title.label(class_="form-label") }}{{ form.title(class_="form-control") }}</div>
+      <div class="form-group">{{ form.description.label(class_="form-label") }}{{ form.description(class_="form-textarea") }}</div>
+      <div class="form-row">
+        <div class="form-group">{{ form.tech_stack.label(class_="form-label") }}{{ form.tech_stack(class_="form-control") }}</div>
+        <div class="form-group">{{ form.role.label(class_="form-label") }}{{ form.role(class_="form-control") }}</div>
+      </div>
+      <div class="form-group">{{ form.url.label(class_="form-label") }}{{ form.url(class_="form-control") }}</div>
+      {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+    </form>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Role inspiration</h3></div>
+    {% if role_recs %}
+      <ul class="action-list">
+        {% for r in role_recs %}
+          <li><span class="step">◇</span><div><strong>{{ r.name }}</strong>{% if r.description %}<p class="mb-0 text-muted" style="font-size:0.82rem;">{{ r.description[:140] }}{% if r.description|length > 140 %}…{% endif %}</p>{% endif %}</div></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted mb-0">Align at least one project to your target career.</p>
+    {% endif %}
+  </article>
+</div>
+
+{% if projects %}
+<div class="grid grid-2 mb-2">
+  {% for p in projects %}
+  <article class="glass-card">
+    <div class="card-header"><h3 class="mb-0">{{ p.title }}</h3></div>
+    {% if p.description %}<p>{{ p.description }}</p>{% endif %}
+    {% if p.tech_stack %}
+      <div class="mb-2">
+        {% for tech in p.tech_stack.split(',') %}
+          <span class="skill-pill">{{ tech.strip() }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if p.role %}<p class="text-muted" style="font-size:0.85rem;">Role: {{ p.role }}</p>{% endif %}
+    {% if p.url %}<a href="{{ p.url }}" class="btn btn-sm btn-glass" target="_blank" rel="noopener">Open link</a>{% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="glass-card empty-state mb-2">
+  <h3>No projects yet</h3>
+  <p>Add your first flagship project to boost readiness.</p>
+  <span class="demo-badge">Demo Preview</span>
+</div>
+{% endif %}
+
+{% if internships or certifications %}
+<div class="grid grid-2">
+  {% if internships %}
+  <article class="glass-card">
+    <div class="card-header"><h3>Internships</h3></div>
+    <ul class="action-list">
+      {% for i in internships %}
+        <li><span class="step">{{ loop.index }}</span><div><strong>{{ i.company or i.title }}</strong>{% if i.role %}<p class="mb-0 text-muted">{{ i.role }}</p>{% endif %}</div></li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endif %}
+  {% if certifications %}
+  <article class="glass-card">
+    <div class="card-header"><h3>Certifications</h3></div>
+    <ul class="action-list">
+      {% for c in certifications %}
+        <li><span class="step">{{ loop.index }}</span><div><strong>{{ c.name or c.title }}</strong>{% if c.issuer %}<p class="mb-0 text-muted">{{ c.issuer }}</p>{% endif %}</div></li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

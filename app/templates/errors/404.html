@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found — EDUNOVA AI{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+<div class="auth-panel" style="min-height:100vh;align-items:center;text-align:center;">
+  <div class="auth-card glass-card" style="max-width:480px;">
+    <a href="{{ url_for('main.landing') }}" class="landing-nav-brand" style="display:inline-flex;justify-content:center;margin-bottom:1.5rem;width:100%;">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="34" height="34">
+      EDUNOVA AI
+    </a>
+    <p class="eyebrow">404</p>
+    <h1>Page not found</h1>
+    <p class="lead">That route doesn’t exist or was moved. Head back to safety.</p>
+    <div class="btn-group" style="justify-content:center;">
+      <a href="{{ url_for('main.landing') }}" class="btn btn-primary">Home</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-glass">Log in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

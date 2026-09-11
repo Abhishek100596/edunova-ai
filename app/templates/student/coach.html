@@ -1,0 +1,62 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}AI Coach — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Preparation</p>
+    <h1>AI career coach</h1>
+    <p>Personalized guidance from your stored profile, readiness, and skill gaps — with local fallback if cloud AI is offline.</p>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <article class="glass-card" style="display:flex;flex-direction:column;min-height:520px;">
+    <div class="card-header">
+      <h3>Conversation</h3>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-glass" type="submit" name="clear" value="1">Clear chat</button>
+      </form>
+    </div>
+    <div class="chat-thread" style="flex:1;">
+      {% if history %}
+        {% for m in history %}
+          <div class="chat-bubble {% if m.role == 'user' %}user{% else %}ai{% endif %}">{{ m.message }}</div>
+        {% endfor %}
+      {% else %}
+        <div class="chat-bubble ai">
+          Hi — I’m your EDUNOVA coach. Ask about readiness, skill priorities, companies, resume, or interview prep.
+        </div>
+      {% endif %}
+      {% if reply %}
+        <div class="chat-bubble ai">{{ reply }}</div>
+      {% endif %}
+    </div>
+    <form method="post" data-loading class="mt-2">
+      {{ form.hidden_tag() }}
+      <div class="form-group mb-1">
+        {{ form.message.label(class_="form-label") }}
+        {{ form.message(class_="form-textarea", rows="3", placeholder="e.g. What should I learn next?") }}
+      </div>
+      {{ form.submit(class_="btn btn-ai btn-block", **{"data-loading-text": "Thinking…"}) }}
+    </form>
+  </article>
+
+  <div>
+    <article class="glass-card mb-2">
+      <div class="card-header"><h3>Quick actions</h3></div>
+      <ul class="action-list">
+        {% for p in quick_prompts or [] %}
+          <li><span class="step">{{ loop.index }}</span><div>{{ p }}</div></li>
+        {% endfor %}
+      </ul>
+    </article>
+    <article class="glass-card">
+      <div class="card-header"><h3>Guardrails</h3></div>
+      <p class="mb-0" style="font-size:0.9rem;">Coach uses your saved profile only. Guidance is not a hiring guarantee. Never paste passwords or API keys into chat.</p>
+    </article>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Career Matches — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Career intelligence</p>
+    <h1>Career matches</h1>
+    <p>Roles ranked by how your skills align with role requirements.</p>
+  </div>
+  <a href="{{ url_for('student.skill_gap') }}" class="btn btn-ai">Analyze skill gap</a>
+</div>
+
+{% if matches %}
+<div class="grid grid-2">
+  {% for c in matches %}
+  <article class="glass-card">
+    <div class="card-header">
+      <div>
+        {% if c.category %}<p class="eyebrow mb-0">{{ c.category }}</p>{% endif %}
+        <h3 class="mb-0">{{ c.role_name }}</h3>
+      </div>
+      <span class="badge badge-ai">{{ '%.0f'|format(c.match_pct) }}% fit</span>
+    </div>
+    {% if c.description %}<p>{{ c.description }}</p>{% endif %}
+    <div class="progress-track mb-2"><div class="progress-fill" style="width: {{ c.match_pct }}%"></div></div>
+    {% if c.strengths %}
+      <p class="mb-1" style="font-size:0.8rem;"><strong>Strengths</strong></p>
+      <div class="mb-2">
+        {% for s in c.strengths[:5] %}
+          <span class="skill-pill gap-have">{{ s.skill_name }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if c.gaps %}
+      <p class="mb-1" style="font-size:0.8rem;"><strong>Gaps</strong></p>
+      <div>
+        {% for g in c.gaps[:5] %}
+          <span class="skill-pill gap-missing">{{ g.skill_name }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="card-footer btn-group">
+      <a href="{{ url_for('student.skill_gap', role_id=c.role_id) }}" class="btn btn-sm btn-glass">Skill gap</a>
+      <a href="{{ url_for('student.roadmap') }}" class="btn btn-sm btn-ai">Roadmap</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="glass-card empty-state">
+  <h3>No career matches yet</h3>
+  <p>Add skills in onboarding so we can score roles against your profile.</p>
+  <span class="demo-badge">Demo Preview</span>
+  <a href="{{ url_for('student.onboarding') }}" class="btn btn-primary mt-3">Complete onboarding</a>
+</div>
+{% endif %}
+{% endblock %}

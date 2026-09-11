@@ -1,0 +1,29 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Theme — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Settings / Theme</h1>
+    <p>Choose light or dark — or follow system preference.</p>
+  </div>
+</div>
+
+<article class="glass-card" style="max-width:520px;">
+  <div class="card-header"><h3>Appearance</h3></div>
+  <p>Toggle instantly for this browser, or save a preference to your profile.</p>
+  <div class="btn-group mb-2">
+    <button type="button" class="btn btn-glass" data-theme-toggle>Toggle light / dark</button>
+  </div>
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.theme.label(class_="form-label") }}
+      {{ form.theme(class_="form-select") }}
+    </div>
+    {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+  </form>
+</article>
+{% endblock %}

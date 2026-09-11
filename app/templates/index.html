@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}EDUNOVA AI{% endblock %}
+{% block body %}
+{# Compatibility shim — canonical landing is main/landing.html #}
+<meta http-equiv="refresh" content="0;url={{ url_for('main.landing') }}">
+<p class="section" style="text-align:center;padding:4rem;">Redirecting to <a href="{{ url_for('main.landing') }}">EDUNOVA AI</a>…</p>
+{% endblock %}

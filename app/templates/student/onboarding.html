@@ -1,0 +1,101 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Onboarding — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% set pct = profile.onboarding_pct if profile else 0 %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Get started</p>
+    <h1>Profile onboarding</h1>
+    <p>Step {{ step }} of 3 — complete each section so EDUNOVA can personalize your signal.</p>
+  </div>
+  <div style="min-width:180px;">
+    <div class="flex-between mb-1">
+      <span class="stat-label">Completion</span>
+      <strong id="onboarding-progress-label">{{ pct }}% complete</strong>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="onboarding-progress" style="width: {{ pct }}%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs mb-2">
+  <span class="tab {% if step == 1 %}active{% endif %}">1 · Academics</span>
+  <span class="tab {% if step == 2 %}active{% endif %}">2 · Preferences</span>
+  <span class="tab {% if step == 3 %}active{% endif %}">3 · Skills</span>
+</div>
+
+<article class="glass-card">
+  {% if step == 1 %}
+  <form method="post" id="onboarding-form" data-loading>
+    {{ academics.hidden_tag() }}
+    <input type="hidden" name="step" value="1">
+    <section class="form-section">
+      <h3>Academics</h3>
+      <div class="form-row">
+        <div class="form-group">{{ academics.college.label(class_="form-label") }}{{ academics.college(class_="form-control") }}</div>
+        <div class="form-group">{{ academics.degree.label(class_="form-label") }}{{ academics.degree(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ academics.branch.label(class_="form-label") }}{{ academics.branch(class_="form-control") }}</div>
+        <div class="form-group">{{ academics.graduation_year.label(class_="form-label") }}{{ academics.graduation_year(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ academics.location.label(class_="form-label") }}{{ academics.location(class_="form-control") }}</div>
+        <div class="form-group">{{ academics.age.label(class_="form-label") }}{{ academics.age(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ academics.cgpa.label(class_="form-label") }}{{ academics.cgpa(class_="form-control") }}</div>
+        <div class="form-group">{{ academics.attendance.label(class_="form-label") }}{{ academics.attendance(class_="form-control") }}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">{{ academics.backlogs.label(class_="form-label") }}{{ academics.backlogs(class_="form-control") }}</div>
+        <div class="form-group">{{ academics.academic_consistency.label(class_="form-label") }}{{ academics.academic_consistency(class_="form-control") }}</div>
+      </div>
+    </section>
+    {{ academics.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+  </form>
+  {% elif step == 2 %}
+  <form method="post" id="onboarding-form" data-loading>
+    {{ prefs.hidden_tag() }}
+    <input type="hidden" name="step" value="2">
+    <section class="form-section">
+      <h3>Career preferences</h3>
+      <div class="form-group">{{ prefs.preferred_roles.label(class_="form-label") }}{{ prefs.preferred_roles(class_="form-control") }}</div>
+      <div class="form-group">{{ prefs.preferred_industries.label(class_="form-label") }}{{ prefs.preferred_industries(class_="form-control") }}</div>
+      <div class="form-group">{{ prefs.target_companies.label(class_="form-label") }}{{ prefs.target_companies(class_="form-control") }}</div>
+      <div class="form-group">{{ prefs.preferred_location.label(class_="form-label") }}{{ prefs.preferred_location(class_="form-control") }}</div>
+      <label class="form-check">{{ prefs.higher_studies() }} {{ prefs.higher_studies.label.text }}</label>
+    </section>
+    {{ prefs.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+  </form>
+  {% else %}
+  <form method="post" id="onboarding-form" data-loading>
+    {{ skills_form.hidden_tag() }}
+    <input type="hidden" name="step" value="3">
+    <section class="form-section">
+      <h3>Skills</h3>
+      <p class="mb-2" style="font-size:0.9rem;">Select skills and set proficiency (1–5).</p>
+      <div class="grid grid-2">
+        {% for skill in all_skills %}
+        <label class="form-check" style="padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;align-items:flex-start;">
+          <input type="checkbox" name="skill_ids" value="{{ skill.id }}" {% if skill.id in existing_levels %}checked{% endif %}>
+          <span>
+            <strong style="color:var(--text-primary)">{{ skill.name }}</strong>
+            {% if skill.category %}<span class="text-muted" style="font-size:0.78rem;"> · {{ skill.category }}</span>{% endif %}
+            <input class="form-control mt-1" type="number" name="skill_level_{{ skill.id }}" min="1" max="5" value="{{ existing_levels.get(skill.id, 3) }}" style="max-width:5rem;">
+          </span>
+        </label>
+        {% else %}
+        <p class="text-muted">No skills in catalog yet. Ask an admin to seed skills.</p>
+        {% endfor %}
+      </div>
+    </section>
+    {{ skills_form.submit(class_="btn btn-ai", **{"data-loading-text": "Finishing…"}) }}
+  </form>
+  {% endif %}
+</article>
+{% endblock %}

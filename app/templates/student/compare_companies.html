@@ -1,0 +1,49 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}Company Comparison — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>Company Comparison</h1>
+    <p>Compare how your profile aligns with two companies’ educational requirement maps.</p>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<article class="glass-card mt-2">
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label class="form-label" for="company_id_a">Company A</label>
+        <select name="company_id_a" id="company_id_a" class="form-control" required>
+          <option value="">Select…</option>
+          {% for c in companies %}
+            <option value="{{ c.id }}" {% if form.company_id_a.data == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="company_id_b">Company B</label>
+        <select name="company_id_b" id="company_id_b" class="form-control" required>
+          <option value="">Select…</option>
+          {% for c in companies %}
+            <option value="{{ c.id }}" {% if form.company_id_b.data == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {{ form.submit(class_="btn btn-ai") }}
+  </form>
+</article>
+
+{% if comparison %}
+<pre class="glass-card mt-2" style="font-size:0.8rem;overflow:auto;max-height:420px;">{{ comparison|tojson(indent=2) }}</pre>
+{% endif %}
+{% endblock %}

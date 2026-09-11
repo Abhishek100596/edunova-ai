@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Explainability — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Career intelligence</p>
+    <h1>Prediction explainability</h1>
+    <p>Feature contributions for model <strong>{{ model_name }}</strong>.</p>
+  </div>
+  <a href="{{ url_for('student.prediction') }}" class="btn btn-glass">Back to prediction</a>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Positive drivers</h3><span class="badge badge-success">Strengths</span></div>
+    {% if explanation.positive %}
+      {% for f in explanation.positive %}
+        <div class="factor-row">
+          <span>{{ f.label if f.label is defined else f.get('label', f.get('feature', 'Factor')) }}</span>
+          <span class="text-success">{{ f.contribution if f.contribution is defined else f.get('contribution', f.get('value', '')) }}</span>
+          <div class="factor-bar"><span style="width:55%"></span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No positive factors.</p>
+    {% endif %}
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Negative drivers</h3><span class="badge badge-danger">Gaps</span></div>
+    {% if explanation.negative %}
+      {% for f in explanation.negative %}
+        <div class="factor-row">
+          <span>{{ f.label if f.label is defined else f.get('label', f.get('feature', 'Factor')) }}</span>
+          <span class="text-danger">{{ f.contribution if f.contribution is defined else f.get('contribution', f.get('value', '')) }}</span>
+          <div class="factor-bar"><span style="width:40%;background:linear-gradient(135deg,#dc2626,#f87171);"></span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No negative factors.</p>
+    {% endif %}
+  </article>
+</div>
+
+<article class="glass-card">
+  <div class="card-header"><h3>Feature vector</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Feature</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for k, v in features.items() %}
+        <tr><td>{{ k|replace('_',' ') }}</td><td>{{ v }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<div class="disclaimer mt-2">
+  Educational explainability only. Contributions are approximate and may come from a fallback model when a trained artifact is unavailable.
+</div>
+{% endblock %}

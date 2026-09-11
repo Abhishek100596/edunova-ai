@@ -1,0 +1,32 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Career Report — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analytics</p>
+    <h1>Career report</h1>
+    <p>Download a PDF readiness report generated from your latest profile signals.</p>
+  </div>
+  <a href="{{ url_for('student.report') }}" class="btn btn-ai">Download PDF</a>
+</div>
+
+<article class="glass-card">
+  <div class="flex-between mb-2">
+    <div>
+      <p class="eyebrow mb-0">EDUNOVA AI</p>
+      <h2 class="mb-0">{{ current_user.name if current_user.is_authenticated else 'Student' }}</h2>
+      <p class="mb-0">PDF export includes overall readiness, component scores, latest prediction, and top career matches.</p>
+    </div>
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="EDUNOVA AI" width="160" height="36">
+  </div>
+  <div class="disclaimer">
+    The live <code>student.report</code> route streams a PDF via ReportLab. This page is the in-app entry point — use Download PDF to export.
+  </div>
+  <div class="card-footer btn-group">
+    <a href="{{ url_for('student.analytics') }}" class="btn btn-glass">Analytics</a>
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">Dashboard</a>
+  </div>
+</article>
+{% endblock %}

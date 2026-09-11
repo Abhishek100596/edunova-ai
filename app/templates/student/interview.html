@@ -1,0 +1,106 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Interview Prep — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">AI tools</p>
+    <h1>Interview prep</h1>
+    <p>Start a mock session — behavioral, technical, or HR — and get structured feedback.</p>
+  </div>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Start a new session</h3></div>
+    <form method="post" data-loading>
+      {{ start_form.hidden_tag() }}
+      <div class="form-group">
+        {{ start_form.interview_type.label(class_="form-label") }}
+        {{ start_form.interview_type(class_="form-select") }}
+      </div>
+      <div class="form-group">
+        {{ start_form.role_focus.label(class_="form-label") }}
+        {{ start_form.role_focus(class_="form-control", placeholder="e.g. Data Analyst") }}
+      </div>
+      <button type="submit" class="btn btn-ai" name="start" value="1" data-loading-text="Starting…">Start mock interview</button>
+    </form>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>How it works</h3></div>
+    <ul class="action-list">
+      <li><span class="step">1</span><div><strong>Pick a mode</strong><p class="mb-0 text-muted" style="font-size:0.85rem;">Questions from a curated bank, optionally role-aware.</p></div></li>
+      <li><span class="step">2</span><div><strong>Answer in writing</strong><p class="mb-0 text-muted" style="font-size:0.85rem;">Focus on situation, action, result.</p></div></li>
+      <li><span class="step">3</span><div><strong>Get scored feedback</strong><p class="mb-0 text-muted" style="font-size:0.85rem;">Improve before the real round.</p></div></li>
+    </ul>
+  </article>
+</div>
+
+{% if detail %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <h3>Session #{{ detail.id }} · {{ detail.status }}</h3>
+    {% if detail.interview_type %}<span class="badge badge-ai">{{ detail.interview_type }}</span>{% endif %}
+  </div>
+  {% for q in detail.questions %}
+    <div class="card-solid mb-2">
+      <p style="color:var(--text-primary);"><strong>Q{{ q.order_index + 1 }}.</strong> {{ q.prompt }}</p>
+      {% if q.answer %}
+        <p class="mb-0"><span class="badge badge-success">Score {{ q.answer.score }}</span> {{ q.answer.feedback }}</p>
+      {% else %}
+        <form method="post" data-loading>
+          {{ answer_form.hidden_tag() }}
+          <input type="hidden" name="question_id" value="{{ q.id }}">
+          <div class="form-group">
+            <label class="form-label" for="answer_text_{{ q.id }}">Your answer</label>
+            <textarea class="form-textarea" id="answer_text_{{ q.id }}" name="answer_text" required rows="4"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" name="answer" value="1" data-loading-text="Scoring…">Submit answer</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endfor %}
+  {% if detail.status == 'in_progress' %}
+  <form method="post" data-loading>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-glass" name="complete" value="1" data-loading-text="Completing…">Complete interview</button>
+  </form>
+  {% else %}
+  <a href="{{ url_for('student.interview_results', session_id=detail.id) }}" class="btn btn-ai">View results</a>
+  {% endif %}
+</article>
+{% endif %}
+
+<article class="glass-card">
+  <div class="card-header"><h3>Past sessions</h3></div>
+  {% if past %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Type</th><th>Status</th><th>Score</th><th></th></tr></thead>
+      <tbody>
+        {% for s in past %}
+        <tr>
+          <td>{{ s.interview_type or s.mode or '—' }}</td>
+          <td><span class="badge">{{ s.status }}</span></td>
+          <td>{% if s.overall_score is not none %}{{ '%.0f'|format(s.overall_score) }}{% else %}—{% endif %}</td>
+          <td>
+            <a href="{{ url_for('student.interview', session_id=s.id) }}" class="btn btn-sm btn-glass">Open</a>
+            {% if s.status == 'completed' %}
+              <a href="{{ url_for('student.interview_results', session_id=s.id) }}" class="btn btn-sm btn-ghost">Results</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No sessions yet. Start one to practice under pressure.</p>
+    <span class="demo-badge">Demo Preview</span>
+  </div>
+  {% endif %}
+</article>
+{% endblock %}

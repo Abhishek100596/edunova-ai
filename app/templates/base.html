@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EDUNOVA AI — AI-Powered Education, Skill & Career Intelligence. Know where you are. Know what you need. Build what comes next.">
+  <title>{% block title %}EDUNOVA AI — AI-Powered Education, Skill & Career Intelligence{% endblock %}</title>
+  {% if csrf_token is defined %}
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  {% endif %}
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo-mark.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nexora.css') }}">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('nexora-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        else if (document.documentElement.getAttribute('data-theme') === 'system') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <div id="toast-area" class="toast-area" aria-live="polite">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {% set cat = category if category in ['success','error','danger','warning','info'] else 'info' %}
+          {% if cat == 'error' %}{% set cat = 'danger' %}{% endif %}
+          <div class="toast toast-{{ cat }}" data-autodismiss="4500" role="status">
+            <div>{{ message }}</div>
+            <button type="button" class="toast-close" aria-label="Dismiss" onclick="this.parentElement.remove()">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  {% block body %}
+    {% block content %}{% endblock %}
+  {% endblock %}
+
+  <script src="{{ url_for('static', filename='js/nexora.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

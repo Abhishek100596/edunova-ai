@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}EDUNOVA AI — AI-Powered Education, Skill & Career Intelligence{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+<nav class="landing-nav">
+  <a href="{{ url_for('main.landing') }}" class="landing-nav-brand">
+    <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="34" height="34">
+    EDUNOVA AI
+  </a>
+  <div class="landing-nav-actions">
+    <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle theme">◐</button>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-glass btn-sm">Log in</a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Start free</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <p class="eyebrow">AI-Powered Education, Skill &amp; Career Intelligence</p>
+  <h1>EDUNOVA AI</h1>
+  <p class="lead">Know where you are. Know what you need. Build what comes next.</p>
+  <div class="hero-cta">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Start free</a>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-glass">Log in</a>
+  </div>
+
+  <div class="hero-preview glass-card">
+    <div class="flex-between mb-2">
+      <h3 class="mb-0">Career cockpit</h3>
+      <span class="demo-badge">Demo Preview</span>
+    </div>
+    <div class="hero-preview-grid">
+      <div class="card-solid">
+        <div class="stat-label">Placement probability</div>
+        <div class="stat-value text-primary">78%</div>
+        <p class="mb-0 mt-1" style="font-size:0.85rem;">Based on academics, skills &amp; interview signals</p>
+      </div>
+      <div class="card-solid">
+        <div class="stat-label">Top career match</div>
+        <div class="stat-value" style="font-size:1.25rem;">Data Analyst</div>
+        <span class="badge badge-ai mt-1">92% fit · Demo Preview</span>
+      </div>
+      <div class="card-solid">
+        <div class="stat-label">Readiness</div>
+        <div class="stat-value">71</div>
+        <div class="progress-track mt-2"><div class="progress-fill" style="width:71%"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how-it-works">
+  <div class="section-header">
+    <p class="eyebrow">How it works</p>
+    <h2>From profile to plan in three steps</h2>
+    <p>EDUNOVA turns your academics, skills, and practice into an actionable career signal.</p>
+  </div>
+  <div class="steps">
+    <article class="glass-card step-card">
+      <h3>Build your profile</h3>
+      <p class="mb-0">Import academics, skills, projects, and experience once — EDUNOVA keeps readiness scores current.</p>
+    </article>
+    <article class="glass-card step-card">
+      <h3>See your signal</h3>
+      <p class="mb-0">Placement probability, career matches, and skill gaps with clear explainability — not a black box.</p>
+    </article>
+    <article class="glass-card step-card">
+      <h3>Act with AI tools</h3>
+      <p class="mb-0">Coach, interview sims, resume intel, and a learning roadmap tailored to your target roles.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="section-header">
+    <p class="eyebrow">Features</p>
+    <h2>Everything you need to get placement-ready</h2>
+    <p>One platform for prediction, practice, and progress — designed for students and campus teams.</p>
+  </div>
+  <div class="feature-grid">
+    <article class="glass-card feature-card">
+      <div class="feature-icon">◈</div>
+      <h3>Placement prediction</h3>
+      <p class="mb-0">Deterministic readiness models with factor-level explainability and model metadata.</p>
+    </article>
+    <article class="glass-card feature-card">
+      <div class="feature-icon">◇</div>
+      <h3>Career matching</h3>
+      <p class="mb-0">Ranked role fits based on your skills and trajectory — with transparent scoring.</p>
+    </article>
+    <article class="glass-card feature-card">
+      <div class="feature-icon">⬡</div>
+      <h3>Skill gap analysis</h3>
+      <p class="mb-0">See what you have, what’s missing, and what to learn next for your target career.</p>
+    </article>
+    <article class="glass-card feature-card">
+      <div class="feature-icon">✦</div>
+      <h3>AI career coach</h3>
+      <p class="mb-0">Ask focused questions and get structured guidance grounded in your profile.</p>
+    </article>
+    <article class="glass-card feature-card">
+      <div class="feature-icon">◉</div>
+      <h3>Interview practice</h3>
+      <p class="mb-0">Role-aware sessions with feedback so you improve before the real round.</p>
+    </article>
+    <article class="glass-card feature-card">
+      <div class="feature-icon">▤</div>
+      <h3>Resume intelligence</h3>
+      <p class="mb-0">Upload once, get clarity on strengths, gaps, and how recruiters may scan your CV.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="section-header">
+    <p class="eyebrow">FAQ</p>
+    <h2>Questions, answered</h2>
+  </div>
+  <div class="faq-list">
+    <details class="faq-item" open>
+      <summary>Is the placement probability a guarantee?</summary>
+      <p>No. EDUNOVA estimates readiness from your profile signals. Outcomes depend on market conditions, interviews, and effort. Always treat scores as guidance.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Do I need to pay to start?</summary>
+      <p>You can create an account and begin onboarding for free. Premium AI features may depend on your campus or plan configuration.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Is my data secure?</summary>
+      <p>Profiles and uploads stay in your EDUNOVA deployment. Never share secrets in chat. Admins only see what your institution configures.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What appears as Demo Preview?</summary>
+      <p>Landing and empty-state illustrations may show labelled Demo Preview values so you can see the UI before your real data is ready.</p>
+    </details>
+  </div>
+</section>
+
+<footer class="landing-footer">
+  <div>
+    <strong style="color:var(--text-primary)">EDUNOVA AI</strong>
+    <span> — AI-Powered Education, Skill &amp; Career Intelligence</span>
+    <div class="text-muted" style="font-size:0.85rem;margin-top:0.35rem;">Crafted by Shivendra Pratap Singh</div>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('auth.login') }}">Log in</a>
+    <a href="{{ url_for('auth.register') }}">Register</a>
+  </div>
+</footer>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Something went wrong — EDUNOVA AI{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+<div class="auth-panel" style="min-height:100vh;align-items:center;text-align:center;">
+  <div class="auth-card glass-card" style="max-width:480px;">
+    <a href="{{ url_for('main.landing') }}" class="landing-nav-brand" style="display:inline-flex;justify-content:center;margin-bottom:1.5rem;width:100%;">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="34" height="34">
+      EDUNOVA AI
+    </a>
+    <p class="eyebrow">500</p>
+    <h1>Something went wrong</h1>
+    <p class="lead">An unexpected error occurred. Please try again in a moment.</p>
+    <div class="btn-group" style="justify-content:center;">
+      <a href="{{ url_for('main.landing') }}" class="btn btn-primary">Home</a>
+      <a href="javascript:location.reload()" class="btn btn-glass">Retry</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

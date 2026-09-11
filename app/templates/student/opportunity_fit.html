@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import fit_badge, compat_note %}
+
+{% block title %}Opportunity Fit — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Intelligence</p>
+    <h1>Opportunity Fit</h1>
+    <p>Ranked company–role pairs vs your current profile signals.</p>
+  </div>
+  <a href="{{ url_for('intelligence.companies') }}" class="btn btn-glass">Browse companies</a>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+{% if opportunities %}
+<div class="glass-card mt-2">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Role</th>
+          <th>Fit</th>
+          <th>Label</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in opportunities %}
+        <tr>
+          <td>{{ o.company_name or o.company or '—' }}</td>
+          <td>{{ o.role_name or o.role or '—' }}</td>
+          <td>
+            {% if o.fit_pct is defined %}
+              {{ '%.0f'|format(o.fit_pct) }}%
+            {% elif o.score is defined %}
+              {{ '%.0f'|format(o.score) }}{% if o.score <= 1 %}{% else %}%{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ fit_badge(o.label or o.fit_label or 'Estimate') }}</td>
+          <td>
+            {% if o.company_id and o.role_id %}
+              <a href="{{ url_for('intelligence.dream_company') }}?company_id={{ o.company_id }}&amp;role_id={{ o.role_id }}" class="btn btn-sm btn-glass">Deep dive</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="glass-card empty-state mt-2">
+  <h3>No opportunity rankings yet</h3>
+  <p>Complete your skills profile and ensure company requirements are seeded.</p>
+</div>
+{% endif %}
+{% endblock %}

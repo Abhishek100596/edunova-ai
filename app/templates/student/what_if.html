@@ -1,0 +1,82 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}What-If Simulator — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>What-If Simulator</h1>
+    <p>Explore how skill or project changes might shift readiness — without saving changes.</p>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<article class="glass-card mt-2">
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.scenario.label(class_="form-label") }}
+      {{ form.scenario(class_="form-control") }}
+    </div>
+    <div class="grid grid-2">
+      <div class="form-group">
+        {{ form.skill_name.label(class_="form-label") }}
+        <input list="skill-list" name="skill_name" class="form-control" value="{{ form.skill_name.data or '' }}" placeholder="e.g. Python">
+        <datalist id="skill-list">
+          {% for n in skill_names %}<option value="{{ n }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="form-group">
+        {{ form.new_level.label(class_="form-label") }}
+        {{ form.new_level(class_="form-control", placeholder="1–5") }}
+      </div>
+      <div class="form-group">
+        {{ form.extra_projects.label(class_="form-label") }}
+        {{ form.extra_projects(class_="form-control", placeholder="e.g. 2") }}
+      </div>
+    </div>
+    {{ form.submit(class_="btn btn-ai") }}
+  </form>
+</article>
+
+{% if result %}
+<article class="glass-card mt-2">
+  <div class="card-header"><h3>Simulation result</h3>
+    <span class="badge badge-ai">Scenario</span>
+  </div>
+  {% if result is mapping %}
+    <div class="grid grid-2">
+      {% if result.baseline is defined %}
+      <div class="card-solid">
+        <div class="stat-label">Baseline</div>
+        <div class="stat-value">{{ result.baseline }}</div>
+      </div>
+      {% endif %}
+      {% if result.simulated is defined or result.projected is defined %}
+      <div class="card-solid">
+        <div class="stat-label">Simulated</div>
+        <div class="stat-value text-primary">{{ result.simulated or result.projected }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% if result.delta is defined %}
+      <p class="mt-2">Delta: <strong>{{ result.delta }}</strong></p>
+    {% endif %}
+    {% if result.notes %}
+      <p class="text-muted" style="font-size:0.9rem;">{{ result.notes if result.notes is string else result.notes|join(' · ') }}</p>
+    {% endif %}
+    {% if result.readiness is defined %}
+      <p>Projected readiness: {{ result.readiness }}</p>
+    {% endif %}
+    <pre class="mt-2" style="font-size:0.75rem;overflow:auto;max-height:240px;opacity:0.8;">{{ result|tojson(indent=2) }}</pre>
+  {% else %}
+    <p>{{ result }}</p>
+  {% endif %}
+</article>
+{% endif %}
+{% endblock %}

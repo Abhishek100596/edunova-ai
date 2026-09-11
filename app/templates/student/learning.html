@@ -1,0 +1,54 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Learning Hub — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">AI tools</p>
+    <h1>Learning hub</h1>
+    <p>All roadmaps and completed task progress in one place.</p>
+  </div>
+  <a href="{{ url_for('student.roadmap') }}" class="btn btn-ai">Open roadmaps</a>
+</div>
+
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Roadmaps</div>
+    <div class="stat-value">{{ roadmaps|length if roadmaps else 0 }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Tasks completed</div>
+    <div class="stat-value text-primary">{{ tasks_done|default(0) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Onboarding</div>
+    <div class="stat-value">{{ profile.onboarding_pct|default(0) }}%</div>
+  </article>
+</div>
+
+<article class="glass-card">
+  <div class="card-header"><h3>Your roadmaps</h3></div>
+  {% if roadmaps %}
+    <ul class="action-list">
+      {% for rm in roadmaps %}
+        <li>
+          <span class="step">{{ loop.index }}</span>
+          <div class="flex-between w-full">
+            <div>
+              <strong>{{ rm.title }}</strong>
+              <p class="mb-0 text-muted" style="font-size:0.82rem;">Progress {{ '%.0f'|format(rm.progress_pct|default(0)) }}%</p>
+            </div>
+            <a href="{{ url_for('student.roadmap', roadmap_id=rm.id) }}" class="btn btn-sm btn-glass">Open</a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">
+      <p>No roadmaps yet — generate one from skill gaps.</p>
+      <span class="demo-badge">Demo Preview</span>
+    </div>
+  {% endif %}
+</article>
+{% endblock %}

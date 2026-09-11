@@ -1,0 +1,142 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Analytics Lab — EDUNOVA AI{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+
+{% block content %}
+{% set components = readiness.components if readiness else {} %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>EDUNOVA Analytics Lab</h1>
+    <p>Profile, skill, career, and progress analytics from your stored records only.</p>
+  </div>
+  <a href="{{ url_for('student.report') }}" class="btn btn-glass">Download PDF report</a>
+</div>
+
+<div class="grid grid-4 mb-2">
+  <a class="glass-card stat-card" href="{{ url_for('intelligence.intelligence_score') }}">
+    <div class="stat-label">Intelligence Score</div>
+    <div class="stat-value text-primary">→</div>
+  </a>
+  <a class="glass-card stat-card" href="{{ url_for('student.skill_gap') }}">
+    <div class="stat-label">Skill Gap Matrix</div>
+    <div class="stat-value">→</div>
+  </a>
+  <a class="glass-card stat-card" href="{{ url_for('intelligence.what_if') }}">
+    <div class="stat-label">What-If Simulator</div>
+    <div class="stat-value">→</div>
+  </a>
+  <a class="glass-card stat-card" href="{{ url_for('intelligence.career_switch') }}">
+    <div class="stat-label">Career Switch</div>
+    <div class="stat-value">→</div>
+  </a>
+</div>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Data analysis tools</h3></div>
+  <div class="grid grid-3">
+    <a href="{{ url_for('intelligence.skill_intelligence') }}">Skill Distribution / Confidence</a>
+    <a href="{{ url_for('intelligence.compare_careers') }}">Career Comparison</a>
+    <a href="{{ url_for('intelligence.compare_companies') }}">Company Comparison</a>
+    <a href="{{ url_for('intelligence.jd_analyzer') }}">Resume vs JD Analyzer</a>
+    <a href="{{ url_for('intelligence.dream_company') }}">Target Company Analyzer</a>
+    <a href="{{ url_for('intelligence.readiness_center') }}">Readiness Calculator</a>
+    <a href="{{ url_for('intelligence.opportunity_fit') }}">Opportunity Fit</a>
+    <a href="{{ url_for('student.projects') }}">Portfolio Strength</a>
+    <a href="{{ url_for('student.interview') }}">Interview Performance</a>
+  </div>
+</article>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Readiness components</h3></div>
+    <div class="chart-container" style="min-height:300px;">
+      <canvas
+        data-chart="radar"
+        data-chart-payload='{{ {
+          "labels": ["Academic", "Skill", "Project", "Experience", "Certification", "Interview"],
+          "datasets": [{
+            "label": "Current",
+            "data": [
+              components.get("academic", 0),
+              components.get("skill", 0),
+              components.get("project", 0),
+              components.get("experience", 0),
+              components.get("certification", 0),
+              components.get("interview", 0)
+            ],
+            "fill": true,
+            "backgroundColor": "rgba(56,189,248,0.15)",
+            "borderColor": "#38bdf8"
+          }]
+        }|tojson }}'></canvas>
+    </div>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Prediction probability trend</h3></div>
+    <div class="chart-container" style="min-height:300px;">
+      {% if predictions %}
+      {% set pred_labels = [] %}
+      {% set pred_values = [] %}
+      {% for p in predictions %}
+        {% if pred_labels.append(p.created_at.strftime('%m/%d') if p.created_at else loop.index|string) %}{% endif %}
+        {% if pred_values.append((p.probability * 100)|round(1)) %}{% endif %}
+      {% endfor %}
+      <canvas
+        data-chart="line"
+        data-chart-payload='{{ {"labels": pred_labels, "datasets": [{"label": "Probability %", "data": pred_values}]}|tojson }}'></canvas>
+      {% else %}
+      <div class="empty-state">
+        <p><strong>Not enough historical data yet.</strong></p>
+        <p class="text-muted mb-0">Run placement predictions to populate this trend. EDUNOVA never fabricates history charts.</p>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+</div>
+
+<div class="grid grid-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Component scores</h3></div>
+    {% for key, label in [("academic","Academic"),("skill","Skill"),("project","Project"),("experience","Experience"),("certification","Certification"),("interview","Interview")] %}
+      {% set val = components.get(key, 0) %}
+      <div class="factor-row">
+        <span>{{ label }}</span>
+        <span>{{ '%.0f'|format(val) }}</span>
+        <div class="factor-bar"><span style="width: {{ val }}%"></span></div>
+      </div>
+    {% endfor %}
+    <div class="card-footer flex-between">
+      <span class="stat-label">Overall</span>
+      <strong>{{ '%.0f'|format(readiness.overall) if readiness else '—' }}</strong>
+    </div>
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Progress log</h3></div>
+    {% if progress %}
+      <ul class="action-list">
+        {% for p in progress[-12:] %}
+          <li>
+            <span class="step">{{ loop.index }}</span>
+            <div class="flex-between w-full">
+              <span>{{ p.recorded_at }}</span>
+              <span class="badge badge-ai">{{ '%.0f'|format(p.metric_value) }}</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">
+        <p>Not enough historical data yet. Run predictions and complete roadmap tasks to populate progress history.</p>
+      </div>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

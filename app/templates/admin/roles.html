@@ -1,0 +1,73 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Roles — EDUNOVA AI Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Catalog</p>
+    <h1>Career roles</h1>
+    <p>Define roles and required skill levels for matching.</p>
+  </div>
+</div>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Add / update role</h3></div>
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="form-row">
+      <div class="form-group">{{ form.name.label(class_="form-label") }}{{ form.name(class_="form-control") }}</div>
+      <div class="form-group">{{ form.category.label(class_="form-label") }}{{ form.category(class_="form-control") }}</div>
+    </div>
+    <div class="form-group">{{ form.description.label(class_="form-label") }}{{ form.description(class_="form-textarea", rows="3") }}</div>
+    <button type="submit" class="btn btn-primary" name="save_role" value="1" data-loading-text="Saving…">Save role</button>
+  </form>
+</article>
+
+{% for r in roles %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <div>
+      {% if r.category %}<p class="eyebrow mb-0">{{ r.category }}</p>{% endif %}
+      <h3 class="mb-0">{{ r.name }}</h3>
+    </div>
+  </div>
+  {% if r.description %}<p>{{ r.description }}</p>{% endif %}
+  <p class="mb-1" style="font-size:0.8rem;"><strong>Requirements</strong></p>
+  <div class="mb-2">
+    {% for rs in r.required_skills %}
+      <span class="skill-pill">{{ rs.skill.name if rs.skill else rs.skill_id }} · L{{ rs.required_level }}</span>
+    {% else %}
+      <span class="text-muted">No requirements yet.</span>
+    {% endfor %}
+  </div>
+  <form method="post" class="form-row" style="align-items:end;" data-loading>
+    {{ rs_form.hidden_tag() }}
+    <input type="hidden" name="role_id" value="{{ r.id }}">
+    <div class="form-group mb-0">
+      <label class="form-label" for="skill_id_{{ r.id }}">Skill</label>
+      <select class="form-select" id="skill_id_{{ r.id }}" name="skill_id" required>
+        {% for s in all_skills %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      {{ rs_form.required_level.label(class_="form-label") }}
+      {{ rs_form.required_level(class_="form-control", value=3) }}
+    </div>
+    <div class="form-group mb-0">
+      {{ rs_form.importance.label(class_="form-label") }}
+      {{ rs_form.importance(class_="form-control", value=1.0) }}
+    </div>
+    <div class="form-group mb-0">
+      <button type="submit" class="btn btn-glass" name="add_req" value="1" data-loading-text="Adding…">Add requirement</button>
+    </div>
+  </form>
+</article>
+{% else %}
+<div class="glass-card empty-state">
+  <p>No roles yet — create one above.</p>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{# Evidence verification badge #}
+{% macro evidence_badge(status) -%}
+  {% set s = (status or 'unverified')|lower|replace(' ', '_') %}
+  {% if s == 'verified' %}
+    <span class="badge evidence-badge evidence-verified">Verified</span>
+  {% elif s == 'needs_review' %}
+    <span class="badge evidence-badge evidence-review">Needs Review</span>
+  {% elif s == 'stale' %}
+    <span class="badge evidence-badge evidence-stale">Stale</span>
+  {% else %}
+    <span class="badge evidence-badge evidence-unverified">Unverified</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro fit_badge(label) -%}
+  {% set l = (label or '')|lower %}
+  {% if 'strong' in l %}
+    <span class="badge badge-success">{{ label }}</span>
+  {% elif 'competitive' in l %}
+    <span class="badge badge-ai">{{ label }}</span>
+  {% elif 'developing' in l %}
+    <span class="badge badge-warning">{{ label }}</span>
+  {% elif 'major' in l or 'gap' in l %}
+    <span class="badge badge-danger">{{ label }}</span>
+  {% else %}
+    <span class="badge badge-ai">{{ label or 'Fit' }}</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro compat_note(text=none) -%}
+  <p class="compat-disclaimer mb-0">{{ text or 'Compatibility estimate, not a hiring guarantee.' }}</p>
+{%- endmacro %}

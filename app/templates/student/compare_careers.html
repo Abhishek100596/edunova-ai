@@ -1,0 +1,70 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import compat_note %}
+
+{% block title %}Career Comparison — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>Career Comparison</h1>
+    <p>Side-by-side fit of two career roles against your profile.</p>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<article class="glass-card mt-2">
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label class="form-label" for="role_id_a">Career A</label>
+        <select name="role_id_a" id="role_id_a" class="form-control" required>
+          <option value="">Select…</option>
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if form.role_id_a.data == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="role_id_b">Career B</label>
+        <select name="role_id_b" id="role_id_b" class="form-control" required>
+          <option value="">Select…</option>
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if form.role_id_b.data == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {{ form.submit(class_="btn btn-ai") }}
+  </form>
+</article>
+
+{% if comparison %}
+<div class="grid grid-2 mt-2">
+  {% for side in [comparison.a or comparison.role_a or comparison.get('left'), comparison.b or comparison.role_b or comparison.get('right')] if comparison is mapping else [] %}
+    {% if side %}
+    <article class="glass-card">
+      <h3>{{ side.role_name or side.name or 'Role' }}</h3>
+      {% if side.match_pct is defined %}
+        <div class="stat-value text-primary">{{ '%.0f'|format(side.match_pct) }}%</div>
+      {% endif %}
+      {% if side.gaps %}
+        <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Gaps</strong></p>
+        {% for g in side.gaps[:8] %}
+          <span class="skill-pill gap-missing">{% if g is mapping %}{{ g.skill_name or g.name }}{% else %}{{ g }}{% endif %}</span>
+        {% endfor %}
+      {% endif %}
+    </article>
+    {% endif %}
+  {% endfor %}
+</div>
+{% if comparison.summary %}
+<article class="glass-card mt-2"><p class="mb-0">{{ comparison.summary }}</p></article>
+{% endif %}
+<pre class="glass-card mt-2" style="font-size:0.75rem;overflow:auto;max-height:280px;">{{ comparison|tojson(indent=2) }}</pre>
+{% endif %}
+{% endblock %}

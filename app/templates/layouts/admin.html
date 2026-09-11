@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block body_class %}app-body admin-body{% endblock %}
+
+{% macro admin_nav(endpoint, label, icon) -%}
+  <a href="{{ url_for(endpoint) }}"
+     class="nav-link{% if request.endpoint == endpoint %} active{% endif %}"
+     {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>
+    <span class="nav-icon" aria-hidden="true">{{ icon|safe }}</span>
+    <span>{{ label }}</span>
+  </a>
+{%- endmacro %}
+
+{% block body %}
+<div class="app-shell admin-shell" id="app-shell">
+  <aside class="sidebar" id="app-sidebar" aria-label="Admin navigation">
+    <div class="sidebar-brand">
+      <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="32" height="32">
+      <span class="sidebar-brand-text">EDUNOVA AI <span class="admin-badge">Admin</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Control</div>
+        {{ admin_nav('admin.dashboard', 'Dashboard', '▣') }}
+        {{ admin_nav('admin.students', 'Students', '◎') }}
+        {{ admin_nav('admin.skills', 'Skills', '⬡') }}
+        {{ admin_nav('admin.roles', 'Roles', '◇') }}
+        {{ admin_nav('admin.companies', 'Companies', '▣') }}
+        {{ admin_nav('admin.evidence_sources', 'Evidence Sources', '◈') }}
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Account</div>
+        <button type="button" class="nav-link" data-theme-toggle style="width:100%;border:none;background:transparent;cursor:pointer;text-align:left;">
+          <span class="nav-icon" aria-hidden="true">◐</span>
+          <span>Theme</span>
+        </button>
+        <a href="{{ url_for('auth.logout') }}" class="nav-link">
+          <span class="nav-icon" aria-hidden="true">⎋</span>
+          <span>Log out</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button type="button" class="btn btn-glass btn-sm btn-block" data-sidebar-collapse>
+        <span>Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="overlay-backdrop" id="sidebar-backdrop" data-sidebar-close></div>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" class="icon-btn" data-sidebar-open aria-label="Open menu">☰</button>
+        <a href="{{ url_for('admin.dashboard') }}" class="topbar-logo">
+          <img src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="28" height="28">
+          Admin
+        </a>
+      </div>
+      <div class="topbar-right">
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle theme">◐</button>
+        <div class="profile-chip">
+          <span class="avatar">{{ (current_user.name[:1] if current_user and current_user.is_authenticated and current_user.name else 'A')|upper }}</span>
+          <span>{{ current_user.name if current_user and current_user.is_authenticated else 'Admin' }}</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

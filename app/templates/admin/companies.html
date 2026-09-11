@@ -1,0 +1,44 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Companies — EDUNOVA AI Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Catalog</p>
+    <h1>Companies</h1>
+    <p>Read-only company intelligence catalog.</p>
+  </div>
+</div>
+
+<article class="glass-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Focus</th>
+          <th>Careers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in companies %}
+        <tr>
+          <td><strong>{{ c.name }}</strong></td>
+          <td>{{ c.company_type or '—' }}</td>
+          <td>{{ c.country_focus or '—' }}</td>
+          <td>
+            {% if c.careers_url %}
+              <a href="{{ c.careers_url }}" target="_blank" rel="noopener noreferrer">Link</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No companies seeded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}

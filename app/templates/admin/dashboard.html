@@ -1,0 +1,67 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Admin Dashboard — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Control</p>
+    <h1>Admin dashboard</h1>
+    <p>Cohort overview for placement readiness and platform usage.</p>
+  </div>
+  <a href="{{ url_for('admin.students') }}" class="btn btn-primary">Manage students</a>
+</div>
+
+<div class="grid grid-4 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">Students</div>
+    <div class="stat-value">{{ stats.students|default(0) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Profiles</div>
+    <div class="stat-value">{{ stats.profiles|default(0) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Skills / Roles</div>
+    <div class="stat-value" style="font-size:1.4rem;">{{ stats.skills|default(0) }} / {{ stats.roles|default(0) }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Predictions</div>
+    <div class="stat-value text-primary">{{ stats.predictions|default(0) }}</div>
+  </article>
+</div>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Recent students</h3></div>
+  {% if recent_students %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+      <tbody>
+        {% for s in recent_students %}
+        <tr>
+          <td><strong>{{ s.name or '—' }}</strong></td>
+          <td>{{ s.email }}</td>
+          <td>{{ s.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No students registered yet.</p>
+    <span class="demo-badge">Demo Preview</span>
+  </div>
+  {% endif %}
+</article>
+
+<article class="glass-card">
+  <div class="card-header"><h3>Quick links</h3></div>
+  <div class="btn-group">
+    <a href="{{ url_for('admin.skills') }}" class="btn btn-glass">Skills catalog</a>
+    <a href="{{ url_for('admin.roles') }}" class="btn btn-glass">Career roles</a>
+    <a href="{{ url_for('admin.students') }}" class="btn btn-glass">Students</a>
+  </div>
+</article>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import fit_badge, compat_note %}
+
+{% block title %}JD Analyzer — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>JD Analyzer</h1>
+    <p>Paste a job description to extract structured signals and compare to your profile.</p>
+  </div>
+  <a href="{{ url_for('student.resume') }}" class="btn btn-glass">Resume analyzer</a>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<article class="glass-card mt-2">
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="grid grid-2">
+      <div class="form-group">
+        {{ form.title.label(class_="form-label") }}
+        {{ form.title(class_="form-control") }}
+      </div>
+      <div class="form-group">
+        {{ form.company.label(class_="form-label") }}
+        {{ form.company(class_="form-control") }}
+      </div>
+    </div>
+    <div class="form-group">
+      {{ form.raw_text.label(class_="form-label") }}
+      {{ form.raw_text(class_="form-control", rows=12, placeholder="Paste the full job description here…") }}
+    </div>
+    {{ form.submit(class_="btn btn-ai") }}
+  </form>
+</article>
+
+{% if structured or comparison %}
+<div class="grid grid-2 mt-2">
+  {% if structured %}
+  <article class="glass-card">
+    <div class="card-header"><h3>Extracted structure</h3></div>
+    {% if structured is mapping %}
+      {% for key, val in structured.items() %}
+        <p class="mb-1"><strong>{{ key|replace('_',' ')|title }}:</strong>
+          {% if val is sequence and val is not string %}
+            {{ val|join(', ') }}
+          {% else %}
+            {{ val }}
+          {% endif %}
+        </p>
+      {% endfor %}
+    {% else %}
+      <pre>{{ structured }}</pre>
+    {% endif %}
+  </article>
+  {% endif %}
+  {% if comparison %}
+  <article class="glass-card">
+    <div class="card-header">
+      <h3>Profile fit</h3>
+      {% if comparison.label %}{{ fit_badge(comparison.label) }}{% endif %}
+    </div>
+    {% if comparison.match_score is defined or comparison.score is defined %}
+      <div class="stat-value text-primary">{{ '%.0f'|format(comparison.match_score or comparison.score) }}{% if (comparison.match_score or comparison.score) <= 1 %}{% else %}%{% endif %}</div>
+    {% endif %}
+    {% if comparison.missing_skills %}
+      <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Missing</strong></p>
+      {% for s in comparison.missing_skills[:12] %}
+        <span class="skill-pill gap-missing">{% if s is mapping %}{{ s.name or s.skill }}{% else %}{{ s }}{% endif %}</span>
+      {% endfor %}
+    {% endif %}
+    {% if comparison.matched_skills %}
+      <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Matched</strong></p>
+      {% for s in comparison.matched_skills[:12] %}
+        <span class="skill-pill gap-have">{% if s is mapping %}{{ s.name or s.skill }}{% else %}{{ s }}{% endif %}</span>
+      {% endfor %}
+    {% endif %}
+  </article>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

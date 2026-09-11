@@ -1,0 +1,128 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Career Switch — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>Career Switch Intelligence</h1>
+    <p>Map transferable skills, missing requirements, and a staged transition plan.</p>
+  </div>
+</div>
+
+<p class="alert alert-info">{{ disclaimer }}</p>
+
+<article class="glass-card mb-2">
+  <form method="post" data-loading class="grid grid-2">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      <label class="form-label" for="current_role_id">Current role (catalog, optional)</label>
+      <select class="form-select" id="current_role_id" name="current_role_id">
+        <option value="">— None / custom label —</option>
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if form.current_role_id.data == r.id %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      {{ form.current_role_label.label(class_="form-label") }}
+      {{ form.current_role_label(class_="form-control", placeholder="e.g. Data Analyst") }}
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="target_role_id">Target role</label>
+      <select class="form-select" id="target_role_id" name="target_role_id" required>
+        <option value="">Select target…</option>
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if form.target_role_id.data == r.id %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="align-self:end;">
+      {{ form.submit(class_="btn btn-primary") }}
+    </div>
+  </form>
+</article>
+
+{% if result %}
+<div class="grid grid-3 mb-2">
+  <article class="glass-card stat-card">
+    <div class="stat-label">From</div>
+    <div class="stat-value" style="font-size:1.1rem;">{{ result.current_role.name }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">To</div>
+    <div class="stat-value" style="font-size:1.1rem;">{{ result.target_role.name }}</div>
+  </article>
+  <article class="glass-card stat-card">
+    <div class="stat-label">Catalog coverage</div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(result.coverage_pct or 0) }}%</div>
+  </article>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Transferable / strong</h3></div>
+    {% if result.transferable_skills %}
+      <ul class="action-list">
+        {% for s in result.transferable_skills[:12] %}
+          <li>
+            <span class="step">✓</span>
+            <div>
+              <strong>{{ s.skill_name }}</strong>
+              <p class="mb-0 text-muted" style="font-size:0.82rem;">Level {{ s.current_level }} / required {{ s.required_level }}{% if s.note %} · {{ s.note }}{% endif %}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No strongly transferable catalog skills yet.</p>
+    {% endif %}
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Needs development</h3></div>
+    {% if result.missing_skills %}
+      <ul class="action-list">
+        {% for s in result.missing_skills[:12] %}
+          <li>
+            <span class="step">{{ loop.index }}</span>
+            <div>
+              <strong>{{ s.skill_name }}</strong>
+              <p class="mb-0 text-muted" style="font-size:0.82rem;">Have {{ s.current_level }} → need {{ s.required_level }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-success">No catalog gaps for this target.</p>
+    {% endif %}
+  </article>
+</div>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>Transition plan</h3></div>
+  <ol class="action-list">
+    {% for stage in result.transition_plan %}
+      <li>
+        <span class="step">{{ stage.stage }}</span>
+        <div>
+          <strong>{{ stage.title }}</strong>
+          <p class="mb-0">{{ stage.why }}</p>
+          <p class="mb-0 text-muted" style="font-size:0.82rem;">Focus: {{ stage.focus|join(', ') }}</p>
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+</article>
+
+<article class="glass-card">
+  <div class="card-header"><h3>Risk factors</h3></div>
+  <ul>
+    {% for risk in result.risk_factors %}
+      <li>{{ risk }}</li>
+    {% endfor %}
+  </ul>
+  <p class="text-muted mb-0" style="font-size:0.85rem;">{{ result.disclaimer }}</p>
+</article>
+{% endif %}
+{% endblock %}

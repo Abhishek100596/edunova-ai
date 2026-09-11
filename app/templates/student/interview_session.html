@@ -1,0 +1,23 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Interview Session — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Interview</p>
+    <h1>Interview session</h1>
+    <p>Sessions are managed from Interview Prep. Open an active or past session there.</p>
+  </div>
+  <a href="{{ url_for('student.interview') }}" class="btn btn-ai">Go to Interview Prep</a>
+</div>
+
+<article class="glass-card empty-state">
+  <h3>Use Interview Prep</h3>
+  <p>Start a mock interview or resume a session from the Interview Prep page. Results appear after you complete a session.</p>
+  <span class="demo-badge">Demo Preview</span>
+  <div class="btn-group mt-3" style="justify-content:center;">
+    <a href="{{ url_for('student.interview') }}" class="btn btn-primary">Interview Prep</a>
+  </div>
+</article>
+{% endblock %}

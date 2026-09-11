@@ -1,0 +1,126 @@
+{% extends "layouts/app.html" %}
+{% from "components/evidence_badge.html" import evidence_badge, fit_badge, compat_note %}
+
+{% block title %}Dream Company — EDUNOVA AI{% endblock %}
+
+{% block content %}
+{% include "components/ml_disclaimer.html" %}
+
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Analysis Lab</p>
+    <h1>Dream Company</h1>
+    <p>Select a company and role to see fit dimensions, gaps, and distance to goal.</p>
+  </div>
+</div>
+
+{{ compat_note(disclaimer) }}
+
+<article class="glass-card mt-2">
+  <form method="post" data-loading>
+    {{ form.hidden_tag() }}
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label class="form-label" for="company_id">Company</label>
+        <select name="company_id" id="company_id" class="form-control" required>
+          <option value="">Select company…</option>
+          {% for c in companies %}
+            <option value="{{ c.id }}" {% if form.company_id.data == c.id or (request.args.get('company_id') and request.args.get('company_id')|int == c.id) %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="role_id">Target role</label>
+        <select name="role_id" id="role_id" class="form-control" required>
+          <option value="">Select role…</option>
+          {% for r in roles %}
+            <option value="{{ r.id }}" {% if form.role_id.data == r.id or (request.args.get('role_id') and request.args.get('role_id')|int == r.id) %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        {{ form.experience_level.label(class_="form-label") }}
+        {{ form.experience_level(class_="form-control", placeholder="e.g. Entry / Intern") }}
+      </div>
+      <div class="form-group">
+        {{ form.location.label(class_="form-label") }}
+        {{ form.location(class_="form-control", placeholder="e.g. Bengaluru") }}
+      </div>
+    </div>
+    {{ form.submit(class_="btn btn-ai") }}
+  </form>
+</article>
+
+{% if analysis %}
+<div class="grid grid-2 mt-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Fit overview</h3>
+      {% if analysis.fit_label or analysis.label %}{{ fit_badge(analysis.fit_label or analysis.label) }}{% endif %}
+    </div>
+    {% set dims = analysis.fit_dimensions or analysis.dimensions or {} %}
+    {% if dims.skill_fit is defined %}
+      <div class="stat-value text-primary">{{ '%.0f'|format(dims.skill_fit) }}%</div>
+    {% elif analysis.overall_fit is defined or analysis.fit_pct is defined %}
+      <div class="stat-value text-primary">{{ '%.0f'|format(analysis.overall_fit or analysis.fit_pct) }}%</div>
+    {% endif %}
+    {% if dims %}
+      <ul class="action-list mt-2">
+        {% for key, val in dims.items() %}
+          <li>
+            <span class="step">·</span>
+            <div class="flex-between w-full" style="flex:1;">
+              <strong>{{ key|replace('_',' ')|title }}</strong>
+              <span>{% if val is mapping %}{{ '%.0f'|format(val.score|default(val.value|default(0))) }}{% elif val is string %}{{ val }}{% else %}{{ '%.1f'|format(val) }}{% endif %}</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if analysis.distance_to_goal %}
+      <p class="mt-2 mb-0 text-muted" style="font-size:0.9rem;">
+        {% set d = analysis.distance_to_goal %}
+        {% if d is mapping %}
+          Fit gap {{ d.fit_gap|default('—') }} · Readiness gap {{ d.readiness_gap|default('—') }}
+        {% else %}
+          Distance to goal: {{ d }}
+        {% endif %}
+      </p>
+    {% endif %}
+  </article>
+
+  <article class="glass-card">
+    <div class="card-header"><h3>Missing skills</h3></div>
+    {% set gaps = analysis.missing_skills or analysis.gaps or [] %}
+    {% if gaps %}
+      <div>
+        {% for g in gaps %}
+          <span class="skill-pill gap-missing">{% if g is mapping %}{{ g.skill_name or g.name or g.skill }}{% else %}{{ g }}{% endif %}</span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">No major gaps flagged for this mapping.</p>
+    {% endif %}
+  </article>
+</div>
+
+{% if analysis.evidence %}
+<article class="glass-card mt-2">
+  <div class="card-header"><h3>Evidence</h3></div>
+  <ul class="action-list">
+    {% for e in analysis.evidence %}
+      <li>
+        <span class="step">{{ loop.index }}</span>
+        <div>
+          <strong>{{ e.title if e is mapping else e }}</strong>
+          {% if e is mapping %}
+            <div class="mt-1">{{ evidence_badge(e.verification_status) }}</div>
+            {% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener noreferrer" style="font-size:0.85rem;">Source</a>{% endif %}
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</article>
+{% endif %}
+{% endif %}
+{% endblock %}
