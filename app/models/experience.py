@@ -1,5 +1,6 @@
 """Projects, certifications, and internships."""
 
+import json
 from datetime import datetime, timezone
 
 from app.extensions import db
@@ -17,6 +18,8 @@ class Project(db.Model):
     tech_stack = db.Column(db.String(500), nullable=True)
     role = db.Column(db.String(120), nullable=True)
     url = db.Column(db.String(500), nullable=True)
+    analysis_json = db.Column(db.Text, nullable=True)
+    analysis_status = db.Column(db.String(40), nullable=True)
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(
@@ -24,6 +27,14 @@ class Project(db.Model):
     )
 
     student = db.relationship("StudentProfile", back_populates="projects")
+
+    def analysis_dict(self):
+        if not self.analysis_json:
+            return None
+        try:
+            return json.loads(self.analysis_json)
+        except (TypeError, ValueError):
+            return None
 
     def __repr__(self) -> str:
         return f"<Project id={self.id} title={self.title!r}>"

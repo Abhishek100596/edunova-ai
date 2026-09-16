@@ -43,28 +43,71 @@
   </form>
 </article>
 
-{% if comparison %}
+{% if comparison and comparison.error %}
+<article class="glass-card mt-2">
+  <p class="mb-0">We could not compare those careers. Please select two valid roles.</p>
+</article>
+{% elif comparison %}
+{% set a = comparison.role_a %}
+{% set b = comparison.role_b %}
+
+{% if comparison.summary %}
+<article class="glass-card mt-2">
+  <div class="card-header"><h3>Comparison summary</h3></div>
+  <p class="mb-0">{{ comparison.summary }}</p>
+</article>
+{% endif %}
+
 <div class="grid grid-2 mt-2">
-  {% for side in [comparison.a or comparison.role_a or comparison.get('left'), comparison.b or comparison.role_b or comparison.get('right')] if comparison is mapping else [] %}
-    {% if side %}
-    <article class="glass-card">
-      <h3>{{ side.role_name or side.name or 'Role' }}</h3>
-      {% if side.match_pct is defined %}
-        <div class="stat-value text-primary">{{ '%.0f'|format(side.match_pct) }}%</div>
-      {% endif %}
-      {% if side.gaps %}
-        <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Gaps</strong></p>
-        {% for g in side.gaps[:8] %}
-          <span class="skill-pill gap-missing">{% if g is mapping %}{{ g.skill_name or g.name }}{% else %}{{ g }}{% endif %}</span>
+  {% for side in [a, b] %}
+  <article class="glass-card">
+    <div class="card-header">
+      <h3 class="mb-0">{{ side.role_name }}</h3>
+      <span class="badge badge-ai">{{ '%.0f'|format(side.match_pct or 0) }}% match</span>
+    </div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(side.match_pct or 0) }}%</div>
+    {% if side.category %}<p class="form-hint">{{ side.category }}</p>{% endif %}
+
+    {% if side.strengths %}
+      <p class="mb-1 mt-2" style="font-size:0.85rem;"><strong>Matching strengths</strong></p>
+      <div class="mb-2">
+        {% for s in side.strengths[:10] %}
+          <span class="skill-pill">{% if s is mapping %}{{ s.skill_name }}{% else %}{{ s }}{% endif %}</span>
         {% endfor %}
-      {% endif %}
-    </article>
+      </div>
     {% endif %}
+
+    {% if side.gaps %}
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Skill gaps</strong></p>
+      <div class="mb-2">
+        {% for g in side.gaps[:10] %}
+          <span class="skill-pill gap-missing">{% if g is mapping %}{{ g.skill_name }}{% else %}{{ g }}{% endif %}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </article>
   {% endfor %}
 </div>
-{% if comparison.summary %}
-<article class="glass-card mt-2"><p class="mb-0">{{ comparison.summary }}</p></article>
+
+{% if comparison.shared_gap_skills or comparison.shared_strength_skills %}
+<article class="glass-card mt-2">
+  {% if comparison.shared_strength_skills %}
+    <p class="mb-1"><strong>Shared strengths</strong></p>
+    <div class="mb-2">
+      {% for s in comparison.shared_strength_skills %}
+        <span class="skill-pill">{{ s }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if comparison.shared_gap_skills %}
+    <p class="mb-1"><strong>Shared gaps</strong></p>
+    <div>
+      {% for s in comparison.shared_gap_skills %}
+        <span class="skill-pill gap-missing">{{ s }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+</article>
 {% endif %}
-<pre class="glass-card mt-2" style="font-size:0.75rem;overflow:auto;max-height:280px;">{{ comparison|tojson(indent=2) }}</pre>
 {% endif %}
 {% endblock %}

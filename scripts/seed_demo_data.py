@@ -52,6 +52,9 @@ def ensure_extra_columns(db) -> None:
         "ALTER TABLE user_targets ADD COLUMN target_role VARCHAR(160)",
         "ALTER TABLE user_targets ADD COLUMN status VARCHAR(40)",
         "ALTER TABLE user_targets ADD COLUMN notes TEXT",
+        "ALTER TABLE users ADD COLUMN updated_at DATETIME",
+        "ALTER TABLE projects ADD COLUMN analysis_json TEXT",
+        "ALTER TABLE projects ADD COLUMN analysis_status VARCHAR(40)",
     ]
     for stmt in statements:
         try:

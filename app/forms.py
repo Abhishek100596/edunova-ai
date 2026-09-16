@@ -166,12 +166,21 @@ class CoachForm(FlaskForm):
 
 
 class ProjectForm(FlaskForm):
-    title = StringField("Title", validators=[DataRequired(), Length(1, 200)])
+    title = StringField("Title", validators=[Optional(), Length(0, 200)])
     description = TextAreaField("Description", validators=[Optional(), Length(0, 5000)])
     tech_stack = StringField("Tech stack", validators=[Optional(), Length(0, 500)])
     role = StringField("Your role", validators=[Optional(), Length(0, 120)])
-    url = StringField("URL", validators=[Optional(), Length(0, 500)])
+    url = StringField("URL / GitHub", validators=[Optional(), Length(0, 500)])
     submit = SubmitField("Add project")
+
+
+class GitHubProjectForm(FlaskForm):
+    github_url = StringField(
+        "GitHub repository URL",
+        validators=[DataRequired(), Length(10, 500)],
+    )
+    role = StringField("Your role (optional)", validators=[Optional(), Length(0, 120)])
+    submit = SubmitField("Analyze GitHub project")
 
 
 class RoadmapGenerateForm(FlaskForm):

@@ -7,7 +7,7 @@
   <div>
     <p class="eyebrow">Preparation</p>
     <h1>AI career coach</h1>
-    <p>Personalized guidance from your stored profile, readiness, and skill gaps — with local fallback if cloud AI is offline.</p>
+    <p>Personalized guidance from your stored profile, readiness, projects, and recent chat — with local fallback if cloud AI is offline.</p>
   </div>
 </div>
 
@@ -27,11 +27,8 @@
         {% endfor %}
       {% else %}
         <div class="chat-bubble ai">
-          Hi — I’m your EDUNOVA coach. Ask about readiness, skill priorities, companies, resume, or interview prep.
+          Hi — I’m your EDUNOVA coach. Ask about readiness, skill priorities, companies, resume, projects, or interview prep. Follow-ups like “why?” or “give me a 30 day plan” continue from the last topic.
         </div>
-      {% endif %}
-      {% if reply %}
-        <div class="chat-bubble ai">{{ reply }}</div>
       {% endif %}
     </div>
     <form method="post" data-loading class="mt-2">
@@ -49,13 +46,22 @@
       <div class="card-header"><h3>Quick actions</h3></div>
       <ul class="action-list">
         {% for p in quick_prompts or [] %}
-          <li><span class="step">{{ loop.index }}</span><div>{{ p }}</div></li>
+          <li>
+            <span class="step">{{ loop.index }}</span>
+            <div class="flex-between w-full gap-2">
+              <span>{{ p }}</span>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-glass" type="submit" name="quick_prompt" value="{{ p }}">Ask</button>
+              </form>
+            </div>
+          </li>
         {% endfor %}
       </ul>
     </article>
     <article class="glass-card">
       <div class="card-header"><h3>Guardrails</h3></div>
-      <p class="mb-0" style="font-size:0.9rem;">Coach uses your saved profile only. Guidance is not a hiring guarantee. Never paste passwords or API keys into chat.</p>
+      <p class="mb-0" style="font-size:0.9rem;">Coach uses your saved profile and recent conversation only. Guidance is not a hiring guarantee. Never paste passwords or API keys into chat.</p>
     </article>
   </div>
 </div>

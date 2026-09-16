@@ -43,7 +43,81 @@
   </form>
 </article>
 
-{% if comparison %}
-<pre class="glass-card mt-2" style="font-size:0.8rem;overflow:auto;max-height:420px;">{{ comparison|tojson(indent=2) }}</pre>
+{% if comparison and comparison.error %}
+<article class="glass-card mt-2">
+  <p class="mb-0">We could not compare those companies. Please select two valid companies from the list.</p>
+</article>
+{% elif comparison %}
+{% set a = comparison.company_a %}
+{% set b = comparison.company_b %}
+
+{% if comparison.summary %}
+<article class="glass-card mt-2">
+  <div class="card-header"><h3>Comparison summary</h3></div>
+  <p class="mb-0">{{ comparison.summary }}</p>
+  {% if comparison.better_current_fit %}
+    <p class="mt-1 mb-0"><span class="badge badge-ai">Stronger current fit: {{ comparison.better_current_fit }}</span></p>
+  {% endif %}
+  {% if comparison.compared_role_name %}
+    <p class="form-hint mt-1 mb-0">Compared using role: {{ comparison.compared_role_name }}</p>
+  {% endif %}
+</article>
+{% endif %}
+
+<div class="grid grid-2 mt-2">
+  {% for side in [a, b] %}
+  <article class="glass-card">
+    <div class="card-header">
+      <div>
+        <h3 class="mb-0">{{ side.company_name }}</h3>
+        {% if side.company_type %}<p class="mb-0 text-muted" style="font-size:0.85rem;">{{ side.company_type }}</p>{% endif %}
+      </div>
+      <span class="badge badge-ai">{{ side.label or 'Fit' }}</span>
+    </div>
+    <div class="stat-value text-primary">{{ '%.0f'|format(side.fit_pct or 0) }}%</div>
+    <p class="form-hint mb-2">Calculated educational fit</p>
+
+    {% if side.role_name %}
+      <p><strong>Role:</strong> {{ side.role_name }}</p>
+    {% endif %}
+
+    {% if side.matching_skills %}
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Matching skills</strong></p>
+      <div class="mb-2">
+        {% for s in side.matching_skills %}
+          <span class="skill-pill">{{ s }}</span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted" style="font-size:0.85rem;">No matching skills recorded yet for this comparison.</p>
+    {% endif %}
+
+    {% if side.missing_skills %}
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Missing / below-target skills</strong></p>
+      <div class="mb-2">
+        {% for s in side.missing_skills %}
+          <span class="skill-pill gap-missing">{{ s }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if side.relevant_requirements %}
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Relevant requirements</strong></p>
+      <ul class="action-list">
+        {% for req in side.relevant_requirements[:6] %}
+          <li><span class="step">◇</span><div>{{ req }}</div></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if side.career_notes %}
+      <p class="mt-2 mb-0" style="font-size:0.85rem;">{{ side.career_notes }}</p>
+    {% endif %}
+    {% if side.careers_url %}
+      <a class="btn btn-sm btn-glass mt-2" href="{{ side.careers_url }}" target="_blank" rel="noopener">Careers page</a>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
 {% endif %}
 {% endblock %}

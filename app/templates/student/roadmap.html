@@ -7,7 +7,7 @@
   <div>
     <p class="eyebrow">AI tools</p>
     <h1>Learning roadmap</h1>
-    <p>A sequenced plan generated from your skill gaps for a target role.</p>
+    <p>A sequenced plan generated from your skill gaps, projects, and target role — progress is saved in the database.</p>
   </div>
 </div>
 
@@ -18,7 +18,7 @@
       <label class="form-label" for="role_id">Generate for role</label>
       <select class="form-select" id="role_id" name="role_id" required>
         {% for r in roles %}
-          <option value="{{ r.id }}">{{ r.name }}</option>
+          <option value="{{ r.id }}" {% if active and active.role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -38,13 +38,26 @@
     <span class="badge badge-ai">{{ '%.0f'|format(summary.progress_pct if summary.progress_pct is defined else active.progress_pct|default(0)) }}% done</span>
   </div>
   <div class="progress-track"><div class="progress-fill" style="width: {{ summary.progress_pct if summary.progress_pct is defined else active.progress_pct|default(0) }}%"></div></div>
+  {% if summary.task_counts %}
+    <p class="form-hint mt-1 mb-0">
+      Not started: {{ summary.task_counts.not_started or 0 }} ·
+      In progress: {{ summary.task_counts.in_progress or 0 }} ·
+      Completed: {{ summary.task_counts.completed or 0 }}
+    </p>
+  {% endif %}
 </article>
 
 <article class="glass-card mb-2">
   <div class="roadmap-timeline">
-    {% set tasks = summary.tasks if summary.tasks is defined else (active.tasks if active.tasks is defined else []) %}
+    {% set tasks = summary.tasks if summary.tasks is defined else [] %}
     {% if tasks %}
+      {% set ns = namespace(current_stage='') %}
       {% for t in tasks %}
+        {% set stage = t.stage if t.stage is defined else 'GENERAL' %}
+        {% if stage != ns.current_stage %}
+          {% set ns.current_stage = stage %}
+          <h3 class="mt-2 mb-1" style="font-size:1rem;">{{ stage }}</h3>
+        {% endif %}
         <div class="roadmap-item">
           <div class="flex-between gap-2">
             <div>
@@ -78,8 +91,7 @@
 {% else %}
 <div class="glass-card empty-state mb-2">
   <h3>No roadmap yet</h3>
-  <p>Generate one from skill gaps for a career you care about.</p>
-  <span class="demo-badge">Demo Preview</span>
+  <p>Generate one from skill gaps for a career you care about. Progress will persist after refresh.</p>
 </div>
 {% endif %}
 
@@ -91,7 +103,10 @@
       <li>
         <span class="step">{{ loop.index }}</span>
         <div class="flex-between w-full">
-          <strong>{{ rm.title }}</strong>
+          <div>
+            <strong>{{ rm.title }}</strong>
+            <span class="form-hint">{{ '%.0f'|format(rm.progress_pct or 0) }}%</span>
+          </div>
           <a href="{{ url_for('student.roadmap', roadmap_id=rm.id) }}" class="btn btn-sm btn-glass">Open</a>
         </div>
       </li>

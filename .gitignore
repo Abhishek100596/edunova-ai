@@ -9,6 +9,7 @@ __pycache__/
 .coverage
 htmlcov/
 *.db
+instance/
 .DS_Store
 .idea/
 .vscode/

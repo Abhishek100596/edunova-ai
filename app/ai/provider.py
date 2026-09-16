@@ -20,6 +20,7 @@ class AIProvider(Protocol):
         *,
         system: str | None = None,
         context: Mapping[str, Any] | None = None,
+        history: list[Mapping[str, Any]] | None = None,
     ) -> str:
         ...
 
@@ -46,14 +47,35 @@ def _format_context(context: Mapping[str, Any] | None) -> str:
     roles = context.get("preferred_roles")
     if roles:
         parts.append(f"Preferred roles: {roles}")
-    projects = context.get("project_count")
-    if projects is not None:
-        parts.append(f"Projects: {projects}")
+    projects = context.get("project_summaries") or context.get("project_titles")
+    if projects:
+        if isinstance(projects, (list, tuple)):
+            parts.append("Projects: " + "; ".join(str(p) for p in list(projects)[:6]))
+        else:
+            parts.append(f"Projects: {projects}")
+    elif context.get("project_count") is not None:
+        parts.append(f"Projects: {context.get('project_count')}")
+    readiness = context.get("readiness_overall")
+    if readiness is not None:
+        parts.append(f"Readiness: {readiness}")
     return " | ".join(parts)
 
 
+def _format_history(history: list[Mapping[str, Any]] | None, *, limit: int = 12) -> str:
+    if not history:
+        return ""
+    lines: list[str] = []
+    for item in list(history)[-limit:]:
+        role = str(item.get("role") or "user")
+        msg = str(item.get("message") or "").strip()
+        if not msg:
+            continue
+        lines.append(f"{role.upper()}: {msg[:800]}")
+    return "\n".join(lines)
+
+
 class LocalProvider:
-    """Deterministic demo responses grounded in provided student context."""
+    """Deterministic local responses grounded in student context + history."""
 
     name = "local-demo"
 
@@ -63,57 +85,67 @@ class LocalProvider:
         *,
         system: str | None = None,
         context: Mapping[str, Any] | None = None,
+        history: list[Mapping[str, Any]] | None = None,
     ) -> str:
         ctx = _format_context(context)
+        hist = _format_history(history)
+        prompt_l = (prompt or "").strip().lower()
         skills = []
         if context:
-            raw = context.get("skills") or []
+            raw = context.get("skill_names") or context.get("skills") or []
             skills = list(raw) if isinstance(raw, (list, tuple)) else [str(raw)]
 
-        prompt_l = (prompt or "").strip().lower()
         lines = [
-            "[DEMO — LocalProvider] This response is a deterministic demo, "
-            "not a live LLM.",
+            "[LocalProvider] Context-aware local response (not a live cloud LLM).",
         ]
         if ctx:
             lines.append(f"Context used: {ctx}")
-        if system:
-            lines.append(f"System focus: {system[:200]}")
+        if hist:
+            # Include a short digest so follow-ups differ from cold starts.
+            last_user = ""
+            for item in reversed(list(history or [])):
+                if str(item.get("role")) == "user":
+                    last_user = str(item.get("message") or "")[:160]
+                    break
+            if last_user:
+                lines.append(f"Prior user turn considered: {last_user}")
 
-        if any(k in prompt_l for k in ("interview", "answer", "evaluate")):
+        if any(k in prompt_l for k in ("30 day", "30-day", "study plan")):
+            focus = skills[0] if skills else "your top gap skill"
             lines.append(
-                "AI-assisted evaluation hint: cover situation, actions, and "
-                "measurable outcome; reference only skills you actually have"
-                + (f" ({', '.join(skills)})." if skills else ".")
+                f"30-day local plan for {focus}: fundamentals → practice → mini-project → interview stories."
             )
-        elif any(k in prompt_l for k in ("roadmap", "learn", "gap")):
+        elif any(k in prompt_l for k in ("why should", "why that", "why learn")):
+            focus = skills[0] if skills else "the recommended skill"
+            lines.append(
+                f"Why {focus}: it strengthens evidence for your preferred role and closes a catalog gap."
+            )
+        elif any(k in prompt_l for k in ("project should", "what project")):
+            lines.append(
+                "Project idea: build a small end-to-end demo using skills already on your profile, then analyze the GitHub repo in EduNova."
+            )
+        elif any(k in prompt_l for k in ("learn", "gap", "roadmap", "missing")):
             if skills:
                 lines.append(
-                    "Focus next learning on strengthening existing skills "
-                    f"({', '.join(skills[:8])}) before adding new ones."
+                    "Next learning should prioritize documented gaps while reinforcing "
+                    f"({', '.join(str(s) for s in skills[:8])})."
                 )
             else:
                 lines.append(
-                    "No skills on file yet — complete your skill profile before "
-                    "requesting a personalized roadmap."
+                    "No skills on file yet — complete your skill profile before requesting a personalized roadmap."
                 )
         elif any(k in prompt_l for k in ("resume", "cv")):
             lines.append(
-                "Resume tip: quantify impact on projects you already listed; "
-                "do not invent experience or certifications."
+                "Resume tip: quantify impact on projects you already listed; do not invent experience."
+            )
+        elif "interview" in prompt_l:
+            lines.append(
+                "Interview tip: practice role-specific questions using only skills and projects on file."
             )
         else:
-            if skills:
-                lines.append(
-                    "Career coaching (demo): build on your documented skills — "
-                    f"{', '.join(skills[:10])}. Ask about interview prep, "
-                    "skill gaps, or placement readiness for more detail."
-                )
-            else:
-                lines.append(
-                    "Career coaching (demo): your profile has no skills recorded. "
-                    "Add verified skills so advice stays accurate."
-                )
+            lines.append(
+                "Career coaching: answer is grounded in your saved profile. Ask about learning next, why, a 30-day plan, projects, or interviews."
+            )
 
         lines.append(f"Your question: {(prompt or '').strip()[:400]}")
         return "\n".join(lines)
@@ -134,6 +166,7 @@ class GeminiProvider:
         *,
         system: str | None = None,
         context: Mapping[str, Any] | None = None,
+        history: list[Mapping[str, Any]] | None = None,
     ) -> str:
         if not self.api_key:
             raise RuntimeError(
@@ -141,11 +174,14 @@ class GeminiProvider:
                 "environment or use AI_PROVIDER=local."
             )
         ctx = _format_context(context)
+        hist = _format_history(history)
         parts: list[str] = []
         if system:
             parts.append(system)
         if ctx:
             parts.append(f"Student context:\n{ctx}")
+        if hist:
+            parts.append(f"Recent conversation:\n{hist}")
         parts.append(prompt or "")
         full_prompt = "\n\n".join(parts)
 
@@ -192,6 +228,7 @@ class OpenAIProvider:
         *,
         system: str | None = None,
         context: Mapping[str, Any] | None = None,
+        history: list[Mapping[str, Any]] | None = None,
     ) -> str:
         if not self.api_key:
             raise RuntimeError(
@@ -204,12 +241,22 @@ class OpenAIProvider:
         system_parts.append(
             "Never invent skills, projects, or experience the student does not have."
         )
+        system_parts.append(
+            "Answer the current user question; use prior turns only for follow-up context."
+        )
         if ctx:
             system_parts.append(f"Student context: {ctx}")
         messages.append({"role": "system", "content": "\n".join(system_parts)})
+        for item in (history or [])[-12:]:
+            role = str(item.get("role") or "user")
+            content = str(item.get("message") or "").strip()
+            if not content:
+                continue
+            mapped = "assistant" if role == "assistant" else "user"
+            messages.append({"role": mapped, "content": content[:2000]})
         messages.append({"role": "user", "content": prompt or ""})
 
-        payload = {"model": self.model, "messages": messages, "temperature": 0.2}
+        payload = {"model": self.model, "messages": messages, "temperature": 0.4}
         req = urllib.request.Request(
             "https://api.openai.com/v1/chat/completions",
             data=json.dumps(payload).encode("utf-8"),

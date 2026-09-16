@@ -11,6 +11,15 @@ from app.models.profile import StudentProfile
 from app.models.skills import CareerRole
 from app.services.skill_gap import analyze_skill_gaps
 
+STAGE_BUCKETS = (
+    ("FOUNDATION", "Build core fundamentals for the target role."),
+    ("CORE SKILLS", "Close the highest-priority skill gaps."),
+    ("INTERMEDIATE", "Strengthen applied tools and workflows."),
+    ("PROJECTS", "Prove skills with portfolio evidence."),
+    ("ADVANCED", "Stretch into advanced / differentiating skills."),
+    ("INTERVIEW PREPARATION", "Practice explaining your work and role knowledge."),
+)
+
 
 def _task_title(skill_name: str, current: int, required: int) -> str:
     if current <= 0:
@@ -21,6 +30,18 @@ def _task_title(skill_name: str, current: int, required: int) -> str:
 def _estimated_hours(gap_level: int, importance: float) -> float:
     base = 8.0 * max(1, int(gap_level))
     return round(base * max(0.5, float(importance)), 1)
+
+
+def _bucket_for_index(i: int, total: int) -> tuple[str, str]:
+    if total <= 0:
+        return STAGE_BUCKETS[0]
+    # Map gap tasks across CORE → ADVANCED; foundation/projects/interview added explicitly.
+    ratio = i / max(total - 1, 1)
+    if ratio < 0.34:
+        return STAGE_BUCKETS[1]
+    if ratio < 0.67:
+        return STAGE_BUCKETS[2]
+    return STAGE_BUCKETS[4]
 
 
 def generate_roadmap(
@@ -43,13 +64,22 @@ def generate_roadmap(
             db.session.delete(rm)
         db.session.flush()
 
+    readiness_note = ""
+    try:
+        from app.utils.readiness import overall_readiness
+
+        readiness_note = f" Current readiness estimate: {overall_readiness(profile):.0f}/100."
+    except Exception:  # noqa: BLE001
+        readiness_note = ""
+
     roadmap = LearningRoadmap(
         student_id=profile.id,
         role_id=role.id,
         title=f"Roadmap: {role.name}",
         description=(
-            f"Generated from skill gaps for {role.name}. "
+            f"Personalized plan for {role.name} from your skill gaps and profile. "
             f"Coverage before plan: {analysis['coverage_pct']}%."
+            f"{readiness_note}"
         ),
         progress_pct=0.0,
     )
@@ -57,6 +87,41 @@ def generate_roadmap(
     db.session.flush()
 
     order = 0
+
+    def _add_task(
+        *,
+        title: str,
+        description: str,
+        skill_id: int | None = None,
+        hours: float = 8.0,
+        stage: str | None = None,
+    ) -> None:
+        nonlocal order
+        order += 1
+        stage_prefix = f"[{stage}] " if stage else ""
+        db.session.add(
+            LearningTask(
+                roadmap_id=roadmap.id,
+                skill_id=skill_id,
+                title=f"{stage_prefix}{title}"[:200],
+                description=description,
+                status="not_started",
+                order_index=order,
+                estimated_hours=hours,
+            )
+        )
+
+    # FOUNDATION
+    _add_task(
+        title=f"Confirm target role: {role.name}",
+        description=(
+            STAGE_BUCKETS[0][1]
+            + f" Review role expectations and your preferred industries/locations on your profile."
+        ),
+        hours=3.0,
+        stage="FOUNDATION",
+    )
+
     # Role curriculum stages (when catalog has a template)
     try:
         from scripts.demo_catalog import ROADMAP_TEMPLATES
@@ -65,48 +130,68 @@ def generate_roadmap(
     except Exception:  # noqa: BLE001
         stages = []
     for stage in stages:
-        order += 1
-        db.session.add(
-            LearningTask(
-                roadmap_id=roadmap.id,
-                skill_id=None,
-                title=stage,
-                description=f"Curriculum stage for {role.name}: {stage}",
-                status="not_started",
-                order_index=order,
-                estimated_hours=8.0,
-            )
+        _add_task(
+            title=stage,
+            description=f"Curriculum stage for {role.name}: {stage}",
+            hours=8.0,
+            stage="CORE SKILLS",
         )
 
-    for gap in analysis["gaps"]:
-        order += 1
-        task = LearningTask(
-            roadmap_id=roadmap.id,
-            skill_id=gap["skill_id"],
+    gaps = list(analysis.get("gaps") or [])
+    for idx, gap in enumerate(gaps):
+        stage_name, stage_blurb = _bucket_for_index(idx, len(gaps))
+        _add_task(
             title=_task_title(
                 gap["skill_name"], gap["current_level"], gap["required_level"]
             ),
             description=(
-                f"Status: {gap['status']}. Need level {gap['required_level']}, "
+                f"{stage_blurb} Status: {gap['status']}. Need level {gap['required_level']}, "
                 f"currently {gap['current_level']} (gap {gap['gap_level']})."
             ),
-            status="not_started",
-            order_index=order,
-            estimated_hours=_estimated_hours(gap["gap_level"], gap["importance"]),
+            skill_id=gap["skill_id"],
+            hours=_estimated_hours(gap["gap_level"], gap["importance"]),
+            stage=stage_name,
         )
-        db.session.add(task)
+
+    # PROJECTS stage
+    project_count = 0
+    try:
+        from app.models.experience import Project
+
+        project_count = Project.query.filter_by(student_id=profile.id).count()
+    except Exception:  # noqa: BLE001
+        project_count = 0
+    _add_task(
+        title=f"Ship a portfolio project for {role.name}",
+        description=(
+            STAGE_BUCKETS[3][1]
+            + (
+                f" You currently have {project_count} project(s) on file — extend one or add a GitHub analysis."
+                if project_count
+                else " Add a GitHub project in EduNova and document measurable outcomes."
+            )
+        ),
+        hours=20.0,
+        stage="PROJECTS",
+    )
+
+    # INTERVIEW PREPARATION
+    _add_task(
+        title="Interview preparation drills",
+        description=(
+            STAGE_BUCKETS[5][1]
+            + " Use EduNova Interview Prep for technical/HR practice tied to this role."
+        ),
+        hours=10.0,
+        stage="INTERVIEW PREPARATION",
+    )
 
     if order == 0:
-        db.session.add(
-            LearningTask(
-                roadmap_id=roadmap.id,
-                skill_id=None,
-                title=f"Maintain readiness for {role.name}",
-                description="All required skills currently meet or exceed targets.",
-                status="not_started",
-                order_index=1,
-                estimated_hours=4.0,
-            )
+        _add_task(
+            title=f"Maintain readiness for {role.name}",
+            description="All required skills currently meet or exceed targets.",
+            hours=4.0,
+            stage="ADVANCED",
         )
 
     update_roadmap_progress(roadmap)
@@ -118,7 +203,6 @@ def update_roadmap_progress(roadmap: LearningRoadmap) -> float:
     """Recompute progress_pct from task statuses. Returns new percentage."""
     tasks = list(roadmap.tasks or [])
     if not tasks:
-        # Reload from DB if relationship not populated.
         tasks = LearningTask.query.filter_by(roadmap_id=roadmap.id).all()
     if not tasks:
         roadmap.progress_pct = 0.0
@@ -133,7 +217,7 @@ def update_roadmap_progress(roadmap: LearningRoadmap) -> float:
     return pct
 
 
-def set_task_status(task_id: int, status: str) -> LearningTask:
+def set_task_status(task_id: int, status: str, *, student_id: int | None = None) -> LearningTask:
     if status not in TASK_STATUSES:
         raise ValueError(
             f"Invalid status {status!r}. Expected one of {TASK_STATUSES}."
@@ -141,6 +225,8 @@ def set_task_status(task_id: int, status: str) -> LearningTask:
     task = db.session.get(LearningTask, task_id)
     if task is None:
         raise ValueError(f"LearningTask id={task_id} not found.")
+    if student_id is not None and task.roadmap and task.roadmap.student_id != student_id:
+        raise ValueError("Task does not belong to this student.")
     task.status = status
     task.completed_at = (
         datetime.now(timezone.utc) if status == "completed" else None
@@ -155,23 +241,32 @@ def roadmap_summary(roadmap: LearningRoadmap) -> dict[str, Any]:
         LearningTask.order_index.asc()
     ).all()
     by_status = {s: 0 for s in TASK_STATUSES}
+    stages: dict[str, list[dict[str, Any]]] = {}
+    task_rows: list[dict[str, Any]] = []
     for t in tasks:
         by_status[t.status] = by_status.get(t.status, 0) + 1
+        stage = "GENERAL"
+        title = t.title or ""
+        if title.startswith("[") and "]" in title:
+            stage = title[1 : title.index("]")]
+        row = {
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "skill_id": t.skill_id,
+            "status": t.status,
+            "order_index": t.order_index,
+            "estimated_hours": t.estimated_hours,
+            "stage": stage,
+        }
+        task_rows.append(row)
+        stages.setdefault(stage, []).append(row)
     return {
         "roadmap_id": roadmap.id,
         "title": roadmap.title,
         "role_id": roadmap.role_id,
         "progress_pct": roadmap.progress_pct,
         "task_counts": by_status,
-        "tasks": [
-            {
-                "id": t.id,
-                "title": t.title,
-                "skill_id": t.skill_id,
-                "status": t.status,
-                "order_index": t.order_index,
-                "estimated_hours": t.estimated_hours,
-            }
-            for t in tasks
-        ],
+        "tasks": task_rows,
+        "stages": stages,
     }

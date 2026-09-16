@@ -10,6 +10,8 @@ from config import Config
 
 def create_app(config_object=None) -> Flask:
     """Create and configure the Flask application."""
+    from datetime import timedelta
+
     app = Flask(
         __name__,
         instance_relative_config=False,
@@ -17,6 +19,19 @@ def create_app(config_object=None) -> Flask:
         template_folder="templates",
     )
     app.config.from_object(config_object or Config)
+
+    # Ensure SQLite parent directory exists for absolute instance paths.
+    uri = str(app.config.get("SQLALCHEMY_DATABASE_URI") or "")
+    if uri.startswith("sqlite:///") and ":memory:" not in uri:
+        db_path = Path(uri.replace("sqlite:///", "", 1))
+        if db_path.parent and str(db_path.parent) not in {"", "."}:
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    days = int(app.config.get("REMEMBER_COOKIE_DURATION_DAYS") or 14)
+    app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=days)
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
+        seconds=int(app.config.get("PERMANENT_SESSION_LIFETIME") or 60 * 60 * 24 * 14)
+    )
 
     _ensure_upload_folder(app)
     _init_extensions(app)
@@ -30,6 +45,7 @@ def create_app(config_object=None) -> Flask:
     importlib.import_module("app.models")
 
     with app.app_context():
+        # create_all is additive / idempotent — it does not wipe existing rows.
         db.create_all()
         try:
             from scripts.seed_demo_data import (

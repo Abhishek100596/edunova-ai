@@ -25,6 +25,7 @@ from app.forms import (
     AddStudentSkillForm,
     AddTrackedCompanyForm,
     CoachForm,
+    GitHubProjectForm,
     InterviewAnswerForm,
     InterviewStartForm,
     JDMatchForm,
@@ -552,7 +553,9 @@ def roadmap():
     if task_form.validate_on_submit() and "update_task" in request.form:
         try:
             task = roadmap_svc.set_task_status(
-                task_form.task_id.data, task_form.status.data
+                task_form.task_id.data,
+                task_form.status.data,
+                student_id=profile.id,
             )
             flash(f"Task updated: {task.title}", "success")
             return redirect(
@@ -762,16 +765,19 @@ def interview_results(session_id: int):
 def coach():
     profile = ensure_student_profile()
     form = CoachForm()
-    reply = None
     if request.method == "POST" and "clear" in request.form:
         n = coach_svc.clear_conversation(profile)
         flash(f"Cleared {n} conversation messages.", "success")
         return redirect(url_for("student.coach"))
     if form.validate_on_submit():
         result = coach_svc.ask_coach(profile, form.message.data)
-        reply = result["reply"]
         flash(f"Coach replied via {result['provider']}.", "info")
-        form.message.data = ""
+        return redirect(url_for("student.coach"))
+    # Quick-prompt buttons post message directly
+    if request.method == "POST" and request.form.get("quick_prompt"):
+        result = coach_svc.ask_coach(profile, request.form.get("quick_prompt"))
+        flash(f"Coach replied via {result['provider']}.", "info")
+        return redirect(url_for("student.coach"))
     history = (
         AIConversation.query.filter_by(student_id=profile.id)
         .order_by(AIConversation.created_at.desc())
@@ -781,16 +787,18 @@ def coach():
     history = list(reversed(history))
     quick_prompts = [
         "What should I learn next?",
-        "Am I ready for a Data Analyst role?",
-        "Why is my readiness score what it is?",
-        "Which company should I target next?",
-        "How can I improve my resume?",
+        "Why should I learn that?",
+        "Give me a 30 day plan.",
+        "What project should I build?",
+        "What skills am I missing?",
+        "How can I improve my placement readiness?",
+        "Prepare me for technical interview",
+        "Which companies should I target?",
     ]
     return render_template(
         "student/coach.html",
         form=form,
         history=history,
-        reply=reply,
         profile=profile,
         quick_prompts=quick_prompts,
     )
@@ -801,20 +809,103 @@ def coach():
 def projects():
     profile = ensure_student_profile()
     form = ProjectForm()
-    if form.validate_on_submit():
-        db.session.add(
-            Project(
-                student_id=profile.id,
-                title=form.title.data.strip(),
-                description=form.description.data,
-                tech_stack=form.tech_stack.data,
-                role=form.role.data,
-                url=form.url.data,
+    github_form = GitHubProjectForm()
+
+    if request.method == "POST" and "analyze_github" in request.form:
+        if github_form.validate_on_submit():
+            from app.services.github_project import (
+                GitHubAnalysisError,
+                analyze_github_repository,
+                apply_analysis_to_project_fields,
             )
-        )
-        db.session.commit()
-        flash("Project added.", "success")
-        return redirect(url_for("student.projects"))
+
+            try:
+                analysis = analyze_github_repository(github_form.github_url.data)
+                fields = apply_analysis_to_project_fields(analysis)
+                project = Project(
+                    student_id=profile.id,
+                    title=fields["title"],
+                    description=fields["description"],
+                    tech_stack=fields["tech_stack"],
+                    role=(github_form.role.data or "").strip() or None,
+                    url=fields["url"],
+                    analysis_json=fields["analysis_json"],
+                    analysis_status="analyzed",
+                )
+                db.session.add(project)
+                db.session.commit()
+                flash(
+                    f"GitHub project analyzed: {project.title}. Evidence saved to your profile.",
+                    "success",
+                )
+                return redirect(url_for("student.projects"))
+            except GitHubAnalysisError as exc:
+                flash(str(exc), "danger")
+            except Exception:
+                current_app.logger.exception("GitHub project analysis failed")
+                flash(
+                    "Could not analyze that repository right now. Please try again later.",
+                    "danger",
+                )
+        else:
+            flash("Enter a valid public GitHub repository URL.", "warning")
+
+    elif form.validate_on_submit():
+        title = (form.title.data or "").strip()
+        url = (form.url.data or "").strip()
+        if not title and url:
+            # Convenience: treat URL-only submissions as GitHub analyze when possible.
+            from app.services.github_project import (
+                GitHubAnalysisError,
+                analyze_github_repository,
+                apply_analysis_to_project_fields,
+                parse_github_url,
+            )
+
+            try:
+                parse_github_url(url)
+                analysis = analyze_github_repository(url)
+                fields = apply_analysis_to_project_fields(analysis)
+                db.session.add(
+                    Project(
+                        student_id=profile.id,
+                        title=fields["title"],
+                        description=fields["description"] or form.description.data,
+                        tech_stack=fields["tech_stack"] or form.tech_stack.data,
+                        role=(form.role.data or "").strip() or None,
+                        url=fields["url"],
+                        analysis_json=fields["analysis_json"],
+                        analysis_status="analyzed",
+                    )
+                )
+                db.session.commit()
+                flash("GitHub URL detected and analyzed.", "success")
+                return redirect(url_for("student.projects"))
+            except GitHubAnalysisError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("student.projects"))
+            except Exception:
+                current_app.logger.exception("GitHub analyze-from-url failed")
+                flash("Could not analyze GitHub URL. Saved as a manual project instead.", "warning")
+                title = title or "GitHub Project"
+
+        if not title:
+            flash("Project title is required (or provide a GitHub URL to analyze).", "danger")
+        else:
+            db.session.add(
+                Project(
+                    student_id=profile.id,
+                    title=title,
+                    description=form.description.data,
+                    tech_stack=form.tech_stack.data,
+                    role=form.role.data,
+                    url=form.url.data,
+                    analysis_status="manual",
+                )
+            )
+            db.session.commit()
+            flash("Project added.", "success")
+            return redirect(url_for("student.projects"))
 
     items = (
         Project.query.filter_by(student_id=profile.id)
@@ -823,11 +914,11 @@ def projects():
     )
     certs = Certification.query.filter_by(student_id=profile.id).all()
     interns = Internship.query.filter_by(student_id=profile.id).all()
-    # Catalog recommendations from career role descriptions.
     role_recs = CareerRole.query.order_by(CareerRole.name).limit(5).all()
     return render_template(
         "student/projects.html",
         form=form,
+        github_form=github_form,
         projects=items,
         certifications=certs,
         internships=interns,

@@ -21,6 +21,12 @@ class User(UserMixin, db.Model):
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     profile = db.relationship(
         "StudentProfile",
@@ -31,6 +37,7 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
+        self.updated_at = datetime.now(timezone.utc)
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
