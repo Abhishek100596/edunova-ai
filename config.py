@@ -42,9 +42,11 @@ class Config:
     UPLOAD_FOLDER = BASE_DIR / "app" / "static" / "uploads"
     ALLOWED_RESUME_EXTENSIONS = {"pdf", "docx"}
     DEMO_MODE = os.environ.get("DEMO_MODE", "true").lower() in {"1", "true", "yes"}
-    AI_PROVIDER = os.environ.get("AI_PROVIDER", "local")  # local | gemini | openai
+    AI_PROVIDER = os.environ.get("AI_PROVIDER", "local")  # local | gemini | openai | groq
     AI_API_KEY = os.environ.get("AI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "")
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+    GROQ_MODEL = os.environ.get("GROQ_MODEL", "")  # default applied in GroqProvider
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
     ML_MODEL_PATH = BASE_DIR / "ml" / "models" / "placement_model.joblib"
     ML_META_PATH = BASE_DIR / "ml" / "models" / "placement_meta.json"

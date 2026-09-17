@@ -8,7 +8,8 @@ from typing import Any
 
 from flask import current_app
 
-from app.ai.provider import get_ai_provider
+from app.ai.provider import complete_with_fallback
+from app.ai.response import markdown_to_safe_html, normalize_ai_text
 from app.extensions import db
 from app.models.analytics import AIConversation
 from app.models.experience import Certification, Internship, Project
@@ -17,6 +18,21 @@ from app.models.skills import StudentSkill
 from app.models.user import User
 
 HISTORY_WINDOW = 16
+
+COACH_SYSTEM_PROMPT = """You are EDUNOVA AI Career Coach — a practical mentor for students.
+
+Rules:
+1. Give direct, practical answers in natural student-friendly language.
+2. Use ONLY the provided student profile and conversation history.
+3. Never invent skills, projects, internships, certifications, grades, or experience.
+4. Clearly distinguish profile facts, calculated metrics (readiness/match %), and recommendations.
+5. If important data is missing, say exactly what the student should add in EduNova.
+6. Answer the CURRENT question. For follow-ups (why?, how?, what next?, make a plan, give examples), continue from the prior topic.
+7. Do not return JSON, Python dictionaries, or code fences unless the student explicitly asks for code.
+8. Do not repeat previous answers verbatim — add new useful detail.
+9. Prefer short paragraphs, bullets, and numbered steps over walls of text.
+10. Scores and fit percentages are educational estimates, not hiring guarantees.
+"""
 
 
 def _parse_json_list(raw: str | None) -> list[Any]:
@@ -131,7 +147,6 @@ def recent_conversation(
 
 
 def _last_assistant_focus(history: list[dict[str, str]], context: dict[str, Any]) -> str | None:
-    """Extract the most recently emphasized skill/topic from assistant replies."""
     skills = [s.lower() for s in (context.get("skill_names") or [])]
     top = context.get("top_role") or {}
     gap0 = None
@@ -144,7 +159,6 @@ def _last_assistant_focus(history: list[dict[str, str]], context: dict[str, Any]
         if item.get("role") != "assistant":
             continue
         text = (item.get("message") or "").lower()
-        # Prefer explicit "learn X" patterns
         m = re.search(
             r"(?:learn|focus on|practice|build|study)\s+([a-z0-9+#./ ]{2,40})",
             text,
@@ -165,26 +179,12 @@ def _last_assistant_focus(history: list[dict[str, str]], context: dict[str, Any]
     return None
 
 
-_SYSTEM_PROMPT = (
-    "You are EDUNOVA AI, a career intelligence coach for students. "
-    "Use only the provided student context and recent conversation. "
-    "Answer the student's CURRENT question directly. "
-    "If they ask a follow-up (why, how, plan, project), continue from the prior topic. "
-    "NEVER invent skills, projects, internships, certifications, or grades "
-    "the student does not have. If information is missing, say so and ask "
-    "the student to update their profile. "
-    "Distinguish profile facts, derived estimates, and recommendations. "
-    "Scores are estimates, not hiring guarantees. "
-    "Do not repeat a previous answer verbatim; add new, useful detail."
-)
-
-
 def _local_smart_reply(
     message: str,
     context: dict[str, Any],
     history: list[dict[str, str]] | None = None,
 ) -> str:
-    """Contextual deterministic coaching — varies with question + history."""
+    """Natural deterministic coaching — no internal demo labels."""
     history = history or []
     msg = (message or "").strip()
     msg_l = msg.lower()
@@ -196,20 +196,7 @@ def _local_smart_reply(
     roles = context.get("preferred_roles") or []
     projects = context.get("project_summaries") or context.get("project_titles") or []
 
-    lines = [
-        "[Local coach] Guidance grounded in your saved EduNova profile "
-        "(cloud provider unavailable or set to local).",
-        f"Student: {context.get('name') or 'Student'} · "
-        f"{(context.get('degree') or '')} {(context.get('branch') or '')}".strip(),
-    ]
-    if skills:
-        lines.append("Skills on file: " + ", ".join(skills[:12]))
-    if readiness is not None:
-        lines.append(f"Readiness estimate: {readiness}/100")
-    if top:
-        lines.append(
-            f"Top catalog match: {top.get('role_name')} ({top.get('match_pct')}%)."
-        )
+    lines: list[str] = []
 
     def _gap_skill() -> str | None:
         gaps = top.get("gaps") or []
@@ -218,59 +205,54 @@ def _local_smart_reply(
             return g0.get("skill_name") if isinstance(g0, dict) else str(g0)
         return focus
 
-    # Follow-ups tied to prior focus
     if any(k in msg_l for k in ("why should i learn", "why that", "why this", "why learn")):
         topic = focus or _gap_skill() or (skills[0] if skills else "a core skill")
+        role_name = top.get("role_name") or (roles[0] if roles else "your target role")
         lines.append(
-            f"You should learn {topic} next because it closes a documented gap for "
-            f"{top.get('role_name') or (roles[0] if roles else 'your target role')} "
-            "and strengthens evidence recruiters look for in that track."
+            f"**Why {topic}?**\n\n"
+            f"Based on your saved profile, {topic} closes a documented gap for "
+            f"**{role_name}** and strengthens evidence recruiters look for on that track."
         )
-        if top.get("gaps"):
-            lines.append(
-                "Your catalog gap analysis prioritizes skills you do not yet meet at the required level."
-            )
-        return "\n".join(lines)
+        if readiness is not None:
+            lines.append(f"Your current readiness estimate is **{readiness}/100** (educational estimate).")
+        return "\n\n".join(lines)
 
-    if any(
-        k in msg_l
-        for k in ("30 day", "30-day", "study plan", "learning plan", "make a plan")
-    ):
+    if any(k in msg_l for k in ("30 day", "30-day", "study plan", "learning plan", "make a plan")):
         topic = focus or _gap_skill() or (skills[0] if skills else "fundamentals")
-        lines.extend(
-            [
-                f"30-day plan focused on {topic}:",
-                f"• Days 1–7: Fundamentals of {topic} (concepts + short exercises).",
-                f"• Days 8–14: Guided tutorials applying {topic} to a tiny dataset or feature.",
-                f"• Days 15–21: Build a small demo that uses {topic} and document results.",
-                f"• Days 22–30: Polish README, practice explaining {topic} in interviews, "
-                "and mark related roadmap tasks complete in EduNova.",
-            ]
+        lines.append(f"**30-day plan focused on {topic}**\n")
+        lines.append(f"1. **Days 1–7:** Fundamentals of {topic} (concepts + short exercises).")
+        lines.append(f"2. **Days 8–14:** Guided tutorials applying {topic} to a tiny dataset or feature.")
+        lines.append(f"3. **Days 15–21:** Build a small demo that uses {topic} and document results.")
+        lines.append(
+            f"4. **Days 22–30:** Polish README, practice explaining {topic} in interviews, "
+            "and mark related roadmap tasks complete in EduNova."
         )
         return "\n".join(lines)
 
     if any(k in msg_l for k in ("what project", "which project", "project should")):
         topic = focus or _gap_skill() or "your strongest skill"
         lines.append(
-            f"Build a portfolio project that showcases {topic} end-to-end "
-            "(problem → data/code → result → short write-up)."
+            f"Build a portfolio project that showcases **{topic}** end-to-end "
+            "(problem → implementation → result → short write-up)."
         )
         if projects:
             lines.append(
-                "You already list: "
-                + "; ".join(str(p) for p in projects[:4])
-                + ". Extend one of these or start a focused new demo around the skill above."
+                "You already list:\n"
+                + "\n".join(f"• {p}" for p in projects[:4])
+                + "\n\nExtend one of these or start a focused new demo around that skill."
             )
         else:
             lines.append(
-                "You have no projects on file yet — add a GitHub repo in Projects so advice can stay concrete."
+                "You have no projects on file yet — add a GitHub repo in **Projects** so advice stays concrete."
             )
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
     if any(k in msg_l for k in ("missing", "skill gap", "skills am i")):
         gaps = top.get("gaps") or []
         if gaps:
-            lines.append("Missing / below-target skills for your top catalog role:")
+            lines.append(
+                f"For **{top.get('role_name') or 'your top catalog role'}**, these skills look below target:"
+            )
             for g in gaps[:6]:
                 name = g.get("skill_name") if isinstance(g, dict) else str(g)
                 lines.append(f"• {name}")
@@ -280,12 +262,22 @@ def _local_smart_reply(
             )
         return "\n".join(lines)
 
-    if any(k in msg_l for k in ("learn next", "what should i learn", "improve my skills", "how do i improve")):
-        topic = _gap_skill() or (actions[0] if actions else None)
-        if topic and isinstance(topic, str) and not topic.lower().startswith("start"):
-            lines.append(f"Next learning focus: {topic}.")
+    if any(
+        k in msg_l
+        for k in ("learn next", "what should i learn", "improve my skills", "how do i improve")
+    ):
+        topic = _gap_skill()
+        if topic:
+            lines.append(f"**Next learning focus: {topic}**")
             lines.append(
-                f"After that, ask “Why should I learn that?” or “Give me a 30 day plan” for a follow-up."
+                f"It is the highest-priority gap for "
+                f"**{top.get('role_name') or (roles[0] if roles else 'your target role')}** "
+                f"on your current profile."
+            )
+            if skills:
+                lines.append("Skills already on file: " + ", ".join(skills[:10]))
+            lines.append(
+                'Ask “Why should I learn that?” or “Give me a 30 day plan” for a follow-up.'
             )
         elif actions:
             lines.append("Suggested next actions from your data:")
@@ -294,20 +286,20 @@ def _local_smart_reply(
             lines.append(
                 "Add a target role and skills so EduNova can prioritize what to learn next."
             )
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
     if any(k in msg_l for k in ("roadmap", "career path", "become a", "suitable for me")):
         if top:
             lines.append(
-                f"A suitable near-term catalog direction is {top.get('role_name')} "
-                f"at about {top.get('match_pct')}% current match."
+                f"A suitable near-term catalog direction is **{top.get('role_name')}** "
+                f"at about **{top.get('match_pct')}%** current match (estimate)."
             )
         if roles:
             lines.append("Preferred roles on profile: " + ", ".join(str(r) for r in roles[:5]))
         lines.append(
-            "Open Learning Roadmap and generate a plan for that role so progress persists in SQL."
+            "Open **Learning Roadmap** and generate a plan for that role so progress persists."
         )
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
     if any(k in msg_l for k in ("company", "companies should", "target next")):
         targets = context.get("target_companies") or []
@@ -316,56 +308,62 @@ def _local_smart_reply(
         )
         if targets:
             lines.append("Targets on profile: " + ", ".join(str(t) for t in targets[:8]))
-        lines.append(
-            "Use Company Comparison to see fit percentages and missing skills side by side."
-        )
-        return "\n".join(lines)
+        lines.append("Use **Company Comparison** to see fit percentages and missing skills side by side.")
+        return "\n\n".join(lines)
 
     if "resume" in msg_l:
         lines.append(
             "Resume tip: quantify outcomes on projects already listed; never invent experience."
         )
         if projects:
-            lines.append("Project evidence available: " + "; ".join(str(p) for p in projects[:3]))
-        return "\n".join(lines)
+            lines.append("Project evidence available:\n" + "\n".join(f"• {p}" for p in projects[:3]))
+        return "\n\n".join(lines)
 
     if "interview" in msg_l:
-        kind = "technical" if "technical" in msg_l else ("HR" if "hr" in msg_l else "behavioral/technical")
-        lines.append(
-            f"For {kind} interview prep: practice role-specific questions using only skills and projects on your profile."
+        kind = (
+            "technical"
+            if "technical" in msg_l
+            else ("HR" if "hr" in msg_l else "behavioral/technical")
         )
-        lines.append("Use Interview Prep in EduNova to run a scored mock session.")
-        return "\n".join(lines)
+        lines.append(
+            f"For **{kind}** interview prep: practice role-specific questions using only skills "
+            "and projects on your profile."
+        )
+        lines.append("Use **Interview Prep** in EduNova to run a scored mock session.")
+        return "\n\n".join(lines)
 
     if any(k in msg_l for k in ("ready", "readiness", "placement readiness")):
         lines.append(
-            "Readiness is a weighted estimate from academics, skills, projects, "
-            "experience, certifications, and interview history — not a placement promise."
+            "Readiness is a weighted estimate from academics, skills, projects, experience, "
+            "certifications, and interview history — not a placement promise."
         )
+        if readiness is not None:
+            lines.append(f"Current readiness estimate: **{readiness}/100**.")
         comps = context.get("readiness_components") or {}
         if comps:
             parts = ", ".join(f"{k}={v}" for k, v in list(comps.items())[:6])
             lines.append(f"Factor breakdown: {parts}")
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
     if any(k in msg_l for k in ("review my project", "analyse my project", "analyze my project")):
         if projects:
             lines.append("Projects on file:")
             lines.extend(f"• {p}" for p in projects[:6])
             lines.append(
-                "For deeper code evidence, paste a public GitHub URL in the Projects page and run Analyze."
+                "For deeper code evidence, paste a public GitHub URL in **Projects** and run Analyze."
             )
         else:
             lines.append(
                 "No projects saved yet. Add a project or GitHub URL so review can stay factual."
             )
-        return "\n".join(lines)
+        return "\n\n".join(lines)
 
-    # Generic but still question-specific
-    lines.append(f"Regarding your question — “{msg[:300]}” — here is profile-grounded guidance:")
+    # Generic but question-aware
+    greeting = context.get("name") or "there"
+    lines.append(f"Hi {greeting.split()[0] if greeting else 'there'} — here's guidance on your question.")
     if focus:
         lines.append(
-            f"Continuing from our recent focus on {focus}: connect your next step to that skill "
+            f"Continuing from our recent focus on **{focus}**: connect your next step to that skill "
             "unless you want to change direction."
         )
     elif actions:
@@ -375,10 +373,12 @@ def _local_smart_reply(
         lines.append(
             "Update skills, preferred roles, and projects so coaching can be more specific."
         )
+    if skills:
+        lines.append("Skills on file: " + ", ".join(skills[:10]))
     lines.append(
         "You can ask follow-ups like what to learn next, why, a 30-day plan, or which project to build."
     )
-    return "\n".join(lines)
+    return "\n\n".join(lines)
 
 
 def ask_coach(
@@ -387,10 +387,17 @@ def ask_coach(
     *,
     persist: bool = True,
 ) -> dict[str, Any]:
-    """Call the configured AI provider with grounded student context + history."""
+    """Call configured AI with grounded context + history; normalize for UI."""
     message = (message or "").strip()
     if not message:
-        return {"provider": "none", "reply": "Please enter a question.", "context_skills": []}
+        return {
+            "provider": "none",
+            "reply": "Please enter a question.",
+            "reply_html": markdown_to_safe_html("Please enter a question."),
+            "context_skills": [],
+            "fallback_used": False,
+            "status_message": "",
+        }
 
     context = build_student_context(profile)
     history = recent_conversation(profile, limit=HISTORY_WINDOW)
@@ -399,30 +406,33 @@ def ask_coach(
         f"{message}\n\n"
         "[Constraint] Only reference skills from this list: "
         f"{', '.join(context['skill_names']) or '(none on file)'}. "
-        "Answer the current question; use conversation history for follow-ups."
+        "Answer the current question; use conversation history for follow-ups. "
+        "Respond in natural language, not JSON."
     )
 
-    provider_name = "local-demo"
-    reply = ""
-    try:
-        provider = get_ai_provider(current_app.config)
-        provider_name = getattr(provider, "name", provider_name)
-        if provider_name in {"local", "local-demo", "demo"}:
-            reply = _local_smart_reply(message, context, history)
-        else:
-            reply = provider.complete(
-                grounded_message,
-                system=_SYSTEM_PROMPT,
-                context=context,
-                history=history,
-            )
-    except Exception:  # noqa: BLE001 — never crash coach UX
-        provider_name = "local-fallback"
-        reply = _local_smart_reply(message, context, history)
-        reply += "\n\n(Note: cloud provider unavailable — using local coach.)"
+    primary = str(current_app.config.get("AI_PROVIDER", "local") or "local").lower()
+    if primary in {"local", "demo", "local-demo"}:
+        reply = normalize_ai_text(_local_smart_reply(message, context, history))
+        provider_name = "local"
+        fallback_used = False
+        status_message = ""
+    else:
+        result = complete_with_fallback(
+            current_app.config,
+            grounded_message,
+            system=COACH_SYSTEM_PROMPT,
+            context=context,
+            history=history,
+        )
+        reply = normalize_ai_text(result["reply"])
+        provider_name = result["provider"]
+        fallback_used = bool(result.get("fallback_used"))
+        status_message = result.get("status_message") or ""
+        # If cloud failed into local, enrich with smarter local reply
+        if provider_name in {"local", "local-demo"} and fallback_used:
+            reply = normalize_ai_text(_local_smart_reply(message, context, history))
 
     if persist:
-        # Avoid duplicate user rows if the same message was just saved (double submit).
         last_user = (
             AIConversation.query.filter_by(student_id=profile.id, role="user")
             .order_by(AIConversation.created_at.desc())
@@ -449,6 +459,7 @@ def ask_coach(
                         "project_count": context["project_count"],
                         "readiness_overall": context.get("readiness_overall"),
                         "history_turns": len(history),
+                        "fallback_used": fallback_used,
                     }
                 ),
             )
@@ -458,7 +469,10 @@ def ask_coach(
     return {
         "provider": provider_name,
         "reply": reply,
+        "reply_html": markdown_to_safe_html(reply),
         "context_skills": context["skill_names"],
+        "fallback_used": fallback_used,
+        "status_message": status_message,
     }
 
 
@@ -469,3 +483,19 @@ def clear_conversation(profile: StudentProfile) -> int:
         db.session.delete(row)
     db.session.commit()
     return count
+
+
+def provider_display_name(app_config=None) -> str:
+    cfg = app_config or current_app.config
+    name = str(cfg.get("AI_PROVIDER", "local") or "local").strip().lower()
+    labels = {
+        "groq": "Groq",
+        "openai": "OpenAI",
+        "gpt": "OpenAI",
+        "gemini": "Gemini",
+        "google": "Gemini",
+        "local": "EduNova local",
+        "demo": "EduNova local",
+        "local-demo": "EduNova local",
+    }
+    return labels.get(name, name.title())

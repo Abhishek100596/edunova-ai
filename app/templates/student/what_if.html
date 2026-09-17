@@ -73,7 +73,9 @@
     {% if result.readiness is defined %}
       <p>Projected readiness: {{ result.readiness }}</p>
     {% endif %}
-    <pre class="mt-2" style="font-size:0.75rem;overflow:auto;max-height:240px;opacity:0.8;">{{ result|tojson(indent=2) }}</pre>
+    {% if result.disclaimer %}
+      <p class="form-hint mt-2 mb-0">{{ result.disclaimer }}</p>
+    {% endif %}
   {% else %}
     <p>{{ result }}</p>
   {% endif %}

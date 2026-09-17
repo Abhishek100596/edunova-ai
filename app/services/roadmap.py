@@ -23,8 +23,16 @@ STAGE_BUCKETS = (
 
 def _task_title(skill_name: str, current: int, required: int) -> str:
     if current <= 0:
-        return f"Learn fundamentals of {skill_name}"
-    return f"Raise {skill_name} from level {current} to {required}"
+        return (
+            f"Build {skill_name} fundamentals with 5 practice exercises "
+            f"and one mini demo (target level {required})"
+        )
+    if current < required:
+        return (
+            f"Strengthen {skill_name} from level {current} to {required} "
+            f"with applied practice and a portfolio artifact"
+        )
+    return f"Maintain {skill_name} at level {current} with spaced review"
 
 
 def _estimated_hours(gap_level: int, importance: float) -> float:
@@ -161,23 +169,62 @@ def generate_roadmap(
         project_count = Project.query.filter_by(student_id=profile.id).count()
     except Exception:  # noqa: BLE001
         project_count = 0
-    _add_task(
-        title=f"Ship a portfolio project for {role.name}",
-        description=(
-            STAGE_BUCKETS[3][1]
-            + (
-                f" You currently have {project_count} project(s) on file — extend one or add a GitHub analysis."
-                if project_count
-                else " Add a GitHub project in EduNova and document measurable outcomes."
+
+    if project_count < 2:
+        _add_task(
+            title=f"Build a portfolio project that proves readiness for {role.name}",
+            description=(
+                STAGE_BUCKETS[3][1]
+                + " Prefer Flask/SQL or analytics stack evidence: authentication or CRUD, "
+                "data validation, and a short README with real outcomes. "
+                + (
+                    f"You currently have {project_count} project(s) on file."
+                    if project_count
+                    else "No projects on file yet — add a GitHub analysis in EduNova Projects."
+                )
+            ),
+            hours=20.0,
+            stage="PROJECTS",
+        )
+    else:
+        _add_task(
+            title=f"Upgrade an existing project for {role.name} storytelling",
+            description=(
+                STAGE_BUCKETS[3][1]
+                + f" You already have {project_count} projects. Improve README metrics, "
+                "architecture notes, and interview talking points — do not invent features."
+            ),
+            hours=12.0,
+            stage="PROJECTS",
+        )
+
+    # Adaptive: weak interview history → communication practice
+    try:
+        from app.models.interview import InterviewSession
+
+        past = (
+            InterviewSession.query.filter_by(student_id=profile.id, status="completed")
+            .order_by(InterviewSession.completed_at.desc())
+            .limit(3)
+            .all()
+        )
+        weak_scores = [s.overall_score for s in past if s.overall_score is not None]
+        if weak_scores and (sum(weak_scores) / len(weak_scores)) < 65:
+            _add_task(
+                title="Interview communication drills (STAR + clarity)",
+                description=(
+                    "Recent mock interview scores suggest communication/structure needs practice. "
+                    "Complete 2 timed answers using only real projects on your profile."
+                ),
+                hours=6.0,
+                stage="INTERVIEW PREPARATION",
             )
-        ),
-        hours=20.0,
-        stage="PROJECTS",
-    )
+    except Exception:  # noqa: BLE001
+        pass
 
     # INTERVIEW PREPARATION
     _add_task(
-        title="Interview preparation drills",
+        title=f"Role interview preparation for {role.name}",
         description=(
             STAGE_BUCKETS[5][1]
             + " Use EduNova Interview Prep for technical/HR practice tied to this role."

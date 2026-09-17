@@ -29,7 +29,7 @@ Standalone Flask platform for personalized career, skill, and evidence-based rea
 - SQLite (local) / PostgreSQL (Render via `DATABASE_URL`)
 - scikit-learn educational placement model
 - Gunicorn
-- Optional Gemini / OpenAI for coach narratives
+- Optional Groq / Gemini / OpenAI for coach narratives and interview evaluation
 
 ## Local setup
 
@@ -66,12 +66,32 @@ Copy `.env.example`. Variables used by the app:
 | `SECRET_KEY` | Flask secret |
 | `DATABASE_URL` | SQLite default or Postgres URL |
 | `DEMO_MODE` | Auto-seed empty DB + demo-friendly defaults |
-| `AI_PROVIDER` | `local` \| `gemini` \| `openai` |
-| `AI_API_KEY` | Server-side only |
-| `AI_MODEL` | Optional model name |
+| `AI_PROVIDER` | `local` \| `gemini` \| `openai` \| `groq` |
+| `AI_API_KEY` | Server-side only (Gemini/OpenAI) |
+| `AI_MODEL` | Optional Gemini/OpenAI model name |
+| `GROQ_API_KEY` | Server-side only (Groq) — never expose to frontend |
+| `GROQ_MODEL` | Groq model id (default `llama-3.3-70b-versatile`) |
 | `PORT` / `HOST` | Runtime bind (Render sets `PORT`) |
 | `SESSION_COOKIE_SECURE` | `true` behind HTTPS |
 | `FLASK_DEBUG` | Must be `false` in production |
+
+### AI provider examples
+
+Local (no cloud key required):
+
+```bash
+AI_PROVIDER=local
+```
+
+Groq:
+
+```bash
+AI_PROVIDER=groq
+GROQ_API_KEY=your_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+If the cloud provider fails, EduNova falls back safely (other configured cloud keys, then local). The app still starts without any AI key.
 
 Never commit real API keys.
 
@@ -99,24 +119,27 @@ gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 
 Equivalent files: `Procfile`, `render.yaml`, `runtime.txt`, `wsgi.py`.
 
-Required env vars: `SECRET_KEY`, `DATABASE_URL` (Postgres recommended), `FLASK_DEBUG=false`, `SESSION_COOKIE_SECURE=true`. Optional: `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `DEMO_MODE`.
+Required env vars: `SECRET_KEY`, `DATABASE_URL` (Postgres recommended), `FLASK_DEBUG=false`, `SESSION_COOKIE_SECURE=true`.
+
+Optional AI: `AI_PROVIDER=groq`, `GROQ_API_KEY` (set in Render dashboard), `GROQ_MODEL`, or `AI_API_KEY` / `AI_MODEL` for Gemini/OpenAI. `DEMO_MODE` optional.
 
 ## Architecture
 
 - `app/routes/` — HTTP blueprints
-- `app/services/` — career/skill/coach/roadmap logic
-- `app/ai/` — AI providers (local fallback + cloud)
+- `app/services/` — career/skill/coach/roadmap/interview logic
+- `app/ai/` — providers (local, Gemini, OpenAI, Groq) + response normalization
 - `ml/` — educational placement model
 - `scripts/` — idempotent demo seed
+- `docs/FEATURE_STATUS.md` — feature matrix
 
 ## AI architecture
 
 | Layer | Notes |
 |-------|-------|
 | ML | Placement estimate from synthetic educational dataset |
-| Deterministic | Readiness, skill gap, company fit, what-if, resume heuristics |
-| External AI | Coach / optional interview narrative when API key configured |
-| Fallback | LocalProvider keeps demos working offline |
+| Deterministic | Readiness, skill gap, company fit, what-if, resume heuristics, roadmap progress |
+| External AI | Coach, interview evaluation/summary when API key configured |
+| Fallback | Local/rule-based keeps demos working offline |
 
 ## Limitations
 

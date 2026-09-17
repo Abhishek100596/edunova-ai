@@ -703,28 +703,40 @@ def interview():
     if answer_form.validate_on_submit() and "answer" in request.form:
         try:
             interview_svc.submit_answer(
-                answer_form.question_id.data, answer_form.answer_text.data
+                answer_form.question_id.data,
+                answer_form.answer_text.data,
+                student_id=profile.id,
             )
             flash("Answer submitted and scored.", "success")
             q = db.session.get(InterviewQuestion, answer_form.question_id.data)
             sid = q.session_id if q else request.args.get("session_id", type=int)
             return redirect(url_for("student.interview", session_id=sid))
+        except PermissionError:
+            flash("You can only answer questions in your own interview session.", "danger")
         except ValueError as exc:
             flash(str(exc), "danger")
 
     session_id = request.args.get("session_id", type=int)
     detail = None
     if session_id:
-        sess = db.session.get(InterviewSession, session_id)
-        if sess and sess.student_id == profile.id:
-            detail = interview_svc.session_detail(session_id)
+        try:
+            detail = interview_svc.session_detail(session_id, student_id=profile.id)
+        except PermissionError:
+            flash("Interview not found.", "danger")
+            detail = None
+        except ValueError:
+            flash("Interview not found.", "danger")
+            detail = None
 
     if request.method == "POST" and "complete" in request.form and session_id:
-        sess = db.session.get(InterviewSession, session_id)
-        if sess and sess.student_id == profile.id:
-            interview_svc.complete_session(session_id)
+        try:
+            interview_svc.complete_session(session_id, student_id=profile.id)
             flash("Interview completed.", "success")
             return redirect(url_for("student.interview_results", session_id=session_id))
+        except PermissionError:
+            flash("You can only complete your own interview session.", "danger")
+        except ValueError as exc:
+            flash(str(exc), "danger")
 
     past = (
         InterviewSession.query.filter_by(student_id=profile.id)
@@ -746,12 +758,15 @@ def interview():
 @student_required
 def interview_results(session_id: int):
     profile = ensure_student_profile()
-    sess = db.session.get(InterviewSession, session_id)
-    if sess is None or sess.student_id != profile.id:
+    try:
+        detail = interview_svc.session_detail(session_id, student_id=profile.id)
+    except (PermissionError, ValueError):
         flash("Interview not found.", "danger")
         return redirect(url_for("student.interview"))
-    detail = interview_svc.session_detail(session_id)
-    followup = interview_svc.coaching_followup(sess) if sess.status == "completed" else None
+    sess = db.session.get(InterviewSession, session_id)
+    followup = None
+    if sess and sess.status == "completed":
+        followup = interview_svc.coaching_followup(sess)
     return render_template(
         "student/interview_results.html",
         detail=detail,
@@ -801,6 +816,8 @@ def coach():
         history=history,
         profile=profile,
         quick_prompts=quick_prompts,
+        provider_label=coach_svc.provider_display_name(),
+        ai_provider=str(current_app.config.get("AI_PROVIDER", "local")),
     )
 
 

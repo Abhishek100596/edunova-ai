@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required
 
 from app.models import CareerRole, PredictionRecord, ProgressRecord
@@ -148,10 +148,20 @@ def coach_json():
         return jsonify({"error": "coach service not available"}), 503
     try:
         result = coach_svc.ask_coach(profile, message)
-    except Exception as exc:  # noqa: BLE001
-        return jsonify({"error": "Coach could not answer right now.", "detail": str(exc)[:160]}), 500
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception("API coach failed")
+        return jsonify({"error": "Coach could not answer right now."}), 500
     if isinstance(result, dict):
-        return jsonify(result)
+        # Never return internal exception detail; keep presentation fields only
+        return jsonify(
+            {
+                "provider": result.get("provider"),
+                "reply": result.get("reply"),
+                "reply_html": result.get("reply_html"),
+                "fallback_used": result.get("fallback_used"),
+                "status_message": result.get("status_message"),
+            }
+        )
     return jsonify({"reply": str(result)})
 
 

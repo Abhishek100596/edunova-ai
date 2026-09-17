@@ -11,7 +11,13 @@ services:
       - key: DEMO_MODE
         value: "true"
       - key: AI_PROVIDER
-        value: local
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: AI_API_KEY
+        sync: false
       - key: FLASK_DEBUG
         value: "false"
       - key: SESSION_COOKIE_SECURE
