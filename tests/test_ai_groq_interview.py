@@ -60,11 +60,53 @@ def test_get_ai_provider_groq(app):
             {
                 "AI_PROVIDER": "groq",
                 "GROQ_API_KEY": "test-key",
-                "GROQ_MODEL": "llama-3.3-70b-versatile",
+                "GROQ_MODEL": "openai/gpt-oss-120b",
             }
         )
         assert p.name == "groq"
         assert isinstance(p, GroqProvider)
+        assert p.model == "openai/gpt-oss-120b"
+
+
+def test_groq_accepts_ai_api_key_alias(app):
+    """Production Render style: AI_PROVIDER=groq + AI_API_KEY + AI_MODEL."""
+    with app.app_context():
+        from app.ai.provider import resolve_groq_credentials
+
+        key, model = resolve_groq_credentials(
+            {
+                "AI_PROVIDER": "groq",
+                "AI_API_KEY": "gsk_test_key",
+                "AI_MODEL": "openai/gpt-oss-120b",
+                "GROQ_API_KEY": "",
+                "GROQ_MODEL": "",
+            }
+        )
+        assert key == "gsk_test_key"
+        assert model == "openai/gpt-oss-120b"
+        p = get_ai_provider(
+            {
+                "AI_PROVIDER": "groq",
+                "AI_API_KEY": "gsk_test_key",
+                "AI_MODEL": "openai/gpt-oss-120b",
+            }
+        )
+        assert p.name == "groq"
+        assert p.api_key == "gsk_test_key"
+
+
+def test_demo_mode_does_not_force_local_provider():
+    from app.ai.provider import get_ai_provider
+
+    p = get_ai_provider(
+        {
+            "AI_PROVIDER": "groq",
+            "DEMO_MODE": True,
+            "AI_API_KEY": "gsk_x",
+            "AI_MODEL": "openai/gpt-oss-120b",
+        }
+    )
+    assert p.name == "groq"
 
 
 def test_groq_missing_key_raises():
@@ -90,10 +132,23 @@ def test_groq_provider_mocked_success(app):
 
     with app.app_context():
         with patch("urllib.request.urlopen", return_value=_Resp()):
-            p = GroqProvider(api_key="fake-key", model="llama-3.3-70b-versatile")
-            out = p.complete("What next?", system="Coach", context={"skill_names": ["SQL"]})
+            with patch.dict("sys.modules", {"groq": None}):
+                # Force HTTP path by making groq import fail inside complete
+                import app.ai.provider as prov
+
+                real_import = __import__
+
+                def fake_import(name, *args, **kwargs):
+                    if name == "groq":
+                        raise ImportError("no groq")
+                    return real_import(name, *args, **kwargs)
+
+                with patch("builtins.__import__", side_effect=fake_import):
+                    p = GroqProvider(api_key="fake-key", model="openai/gpt-oss-120b")
+                    out = p.complete(
+                        "What next?", system="Coach", context={"skill_names": ["SQL"]}
+                    )
             assert "SQL" in out
-            assert "{" not in out or "SQL" in out
 
 
 def test_complete_with_fallback_to_local(app):
@@ -101,7 +156,7 @@ def test_complete_with_fallback_to_local(app):
         cfg = {
             "AI_PROVIDER": "groq",
             "GROQ_API_KEY": "bad-key",
-            "GROQ_MODEL": "llama-3.3-70b-versatile",
+            "GROQ_MODEL": "openai/gpt-oss-120b",
             "AI_API_KEY": "",
         }
 
@@ -109,11 +164,14 @@ def test_complete_with_fallback_to_local(app):
             raise RuntimeError("fail")
 
         with patch.object(GroqProvider, "complete", side_effect=_boom):
-            result = complete_with_fallback(cfg, "What should I learn next?", context={"skill_names": ["Python"]})
+            result = complete_with_fallback(
+                cfg, "What should I learn next?", context={"skill_names": ["Python"]}
+            )
             assert result["provider"] == "local"
             assert result["fallback_used"] is True
             assert result["reply"]
             assert "GROQ_API_KEY" not in result["reply"]
+            assert "bad-key" not in result["reply"]
 
 
 def test_coach_no_raw_json(app):
@@ -213,6 +271,7 @@ def test_roadmap_adaptive_tasks(app):
         summary = roadmap_svc.roadmap_summary(rm)
         titles = " ".join(t["title"] for t in summary["tasks"]).lower()
         assert "strengthen" in titles or "build" in titles or "portfolio" in titles
+        assert "job applications" in titles or "applications" in titles
         assert summary["progress_pct"] == 0 or summary["progress_pct"] >= 0
         task_id = summary["tasks"][0]["id"]
         roadmap_svc.set_task_status(task_id, "completed", student_id=profile.id)

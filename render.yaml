@@ -12,14 +12,18 @@ services:
         value: "true"
       - key: AI_PROVIDER
         value: groq
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: openai/gpt-oss-120b
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
-      - key: AI_API_KEY
-        sync: false
+        value: openai/gpt-oss-120b
       - key: FLASK_DEBUG
         value: "false"
+      - key: FLASK_ENV
+        value: production
       - key: SESSION_COOKIE_SECURE
         value: "true"
       - key: DATABASE_URL

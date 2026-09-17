@@ -786,20 +786,38 @@ def coach():
         return redirect(url_for("student.coach"))
     if form.validate_on_submit():
         result = coach_svc.ask_coach(profile, form.message.data)
-        flash(f"Coach replied via {result['provider']}.", "info")
+        if result.get("fallback_used") and result.get("status_message"):
+            flash(result["status_message"], "warning")
+        else:
+            flash(f"Coach replied via {result.get('provider', 'AI')}.", "info")
         return redirect(url_for("student.coach"))
     # Quick-prompt buttons post message directly
     if request.method == "POST" and request.form.get("quick_prompt"):
         result = coach_svc.ask_coach(profile, request.form.get("quick_prompt"))
-        flash(f"Coach replied via {result['provider']}.", "info")
+        if result.get("fallback_used") and result.get("status_message"):
+            flash(result["status_message"], "warning")
+        else:
+            flash(f"Coach replied via {result.get('provider', 'AI')}.", "info")
         return redirect(url_for("student.coach"))
-    history = (
+    history_rows = (
         AIConversation.query.filter_by(student_id=profile.id)
         .order_by(AIConversation.created_at.desc())
         .limit(40)
         .all()
     )
-    history = list(reversed(history))
+    history_rows = list(reversed(history_rows))
+    from app.ai.response import markdown_to_safe_html
+
+    history = [
+        {
+            "role": m.role,
+            "message": m.message,
+            "message_html": markdown_to_safe_html(m.message)
+            if m.role == "assistant"
+            else None,
+        }
+        for m in history_rows
+    ]
     quick_prompts = [
         "What should I learn next?",
         "Why should I learn that?",

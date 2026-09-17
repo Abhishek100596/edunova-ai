@@ -12,6 +12,16 @@ def create_app(config_object=None) -> Flask:
     """Create and configure the Flask application."""
     from datetime import timedelta
 
+    # Load .env for local/dev without overriding already-set process env (Render secrets).
+    try:
+        from dotenv import load_dotenv
+
+        env_path = Path(__file__).resolve().parents[1] / ".env"
+        if env_path.exists():
+            load_dotenv(env_path, override=False)
+    except Exception:
+        pass
+
     app = Flask(
         __name__,
         instance_relative_config=False,

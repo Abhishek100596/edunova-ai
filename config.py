@@ -1,6 +1,14 @@
 import os
 from pathlib import Path
 
+# Load .env before Config reads os.environ (local development).
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+except Exception:
+    pass
+
 BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -37,16 +45,19 @@ class Config:
     }
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_DURATION_DAYS = int(os.environ.get("REMEMBER_COOKIE_DAYS", "14"))
-    PERMANENT_SESSION_LIFETIME = int(os.environ.get("PERMANENT_SESSION_SECONDS", str(60 * 60 * 24 * 14)))
+    PERMANENT_SESSION_LIFETIME = int(
+        os.environ.get("PERMANENT_SESSION_SECONDS", str(60 * 60 * 24 * 14))
+    )
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB
     UPLOAD_FOLDER = BASE_DIR / "app" / "static" / "uploads"
     ALLOWED_RESUME_EXTENSIONS = {"pdf", "docx"}
     DEMO_MODE = os.environ.get("DEMO_MODE", "true").lower() in {"1", "true", "yes"}
+    # DEMO_MODE only affects seeding/UX — it does NOT force local AI.
     AI_PROVIDER = os.environ.get("AI_PROVIDER", "local")  # local | gemini | openai | groq
     AI_API_KEY = os.environ.get("AI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "")
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-    GROQ_MODEL = os.environ.get("GROQ_MODEL", "")  # default applied in GroqProvider
+    GROQ_MODEL = os.environ.get("GROQ_MODEL", "")
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
     ML_MODEL_PATH = BASE_DIR / "ml" / "models" / "placement_model.joblib"
     ML_META_PATH = BASE_DIR / "ml" / "models" / "placement_meta.json"
@@ -65,3 +76,4 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     DEMO_MODE = True
     DEBUG = False
+    AI_PROVIDER = "local"

@@ -18,6 +18,7 @@ STAGE_BUCKETS = (
     ("PROJECTS", "Prove skills with portfolio evidence."),
     ("ADVANCED", "Stretch into advanced / differentiating skills."),
     ("INTERVIEW PREPARATION", "Practice explaining your work and role knowledge."),
+    ("JOB APPLICATIONS", "Target roles and companies with tailored applications."),
 )
 
 
@@ -231,6 +232,29 @@ def generate_roadmap(
         ),
         hours=10.0,
         stage="INTERVIEW PREPARATION",
+    )
+
+    # JOB APPLICATIONS — grounded in profile preferences / targets when present
+    preferred = ""
+    try:
+        raw_pref = getattr(profile, "preferred_roles", None) or ""
+        preferred = str(raw_pref).strip()
+    except Exception:  # noqa: BLE001
+        preferred = ""
+    target_hint = (
+        f" Preferred roles on file: {preferred}."
+        if preferred and preferred not in {"[]", "null"}
+        else " Add preferred roles / target companies in your profile so applications stay specific."
+    )
+    _add_task(
+        title=f"Prepare 5 tailored applications for {role.name}",
+        description=(
+            STAGE_BUCKETS[6][1]
+            + target_hint
+            + " Customize resume bullets from real EduNova projects only — do not invent experience."
+        ),
+        hours=8.0,
+        stage="JOB APPLICATIONS",
     )
 
     if order == 0:

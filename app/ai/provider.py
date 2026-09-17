@@ -1,4 +1,4 @@
-"""AI provider protocol and implementations (local, gemini, openai, groq)."""
+"""Resolve AI credentials and call providers (local, gemini, openai, groq)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from app.ai.response import normalize_ai_text, safe_ai_error_message
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+# Configurable default — override with GROQ_MODEL or AI_MODEL.
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
@@ -51,6 +52,7 @@ def _format_context(context: Mapping[str, Any] | None) -> str:
         ("branch", "Branch"),
         ("cgpa", "CGPA"),
         ("college", "College"),
+        ("graduation_year", "Graduation year"),
     ):
         val = context.get(key)
         if val is not None and val != "":
@@ -75,28 +77,57 @@ def _format_context(context: Mapping[str, Any] | None) -> str:
     top = context.get("top_role")
     if isinstance(top, dict) and top.get("role_name"):
         parts.append(f"Top match: {top.get('role_name')} ({top.get('match_pct')}%)")
+        gaps = top.get("gaps") or []
+        if gaps:
+            gnames = []
+            for g in gaps[:5]:
+                gnames.append(g.get("skill_name") if isinstance(g, dict) else str(g))
+            if gnames:
+                parts.append("Top skill gaps: " + ", ".join(gnames))
     return " | ".join(parts)
 
 
-def _format_history(history: list[Mapping[str, Any]] | None, *, limit: int = 12) -> str:
-    if not history:
-        return ""
-    lines: list[str] = []
-    for item in list(history)[-limit:]:
+def _history_messages(
+    history: list[Mapping[str, Any]] | None, *, limit: int = 12
+) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    for item in list(history or [])[-limit:]:
         role = str(item.get("role") or "user")
-        msg = str(item.get("message") or "").strip()
-        if not msg:
+        content = str(item.get("message") or "").strip()
+        if not content:
             continue
-        lines.append(f"{role.upper()}: {msg[:800]}")
-    return "\n".join(lines)
+        mapped = "assistant" if role == "assistant" else "user"
+        messages.append({"role": mapped, "content": content[:2000]})
+    return messages
 
 
 def _redact_secrets(text: str, secrets: list[str]) -> str:
     out = text or ""
     for secret in secrets:
-        if secret and secret in out:
+        if secret and len(secret) > 6 and secret in out:
             out = out.replace(secret, "[REDACTED]")
     return out
+
+
+def resolve_groq_credentials(app_config: Mapping[str, Any]) -> tuple[str, str]:
+    """
+    Accept both EduNova-native and Render-style env wiring:
+
+    Preferred:
+      GROQ_API_KEY + GROQ_MODEL
+    Compatible (production docs):
+      AI_PROVIDER=groq + AI_API_KEY + AI_MODEL
+    """
+    key = (
+        str(app_config.get("GROQ_API_KEY", "") or "").strip()
+        or str(app_config.get("AI_API_KEY", "") or "").strip()
+    )
+    model = (
+        str(app_config.get("GROQ_MODEL", "") or "").strip()
+        or str(app_config.get("AI_MODEL", "") or "").strip()
+        or DEFAULT_GROQ_MODEL
+    )
+    return key, model
 
 
 def _openai_compatible_complete(
@@ -109,7 +140,7 @@ def _openai_compatible_complete(
     context: Mapping[str, Any] | None,
     history: list[Mapping[str, Any]] | None,
     temperature: float = 0.4,
-    timeout: int = 45,
+    timeout: int = 60,
     provider_label: str = "openai-compatible",
 ) -> str:
     messages: list[dict[str, str]] = []
@@ -124,13 +155,7 @@ def _openai_compatible_complete(
     if ctx:
         system_parts.append(f"Student context: {ctx}")
     messages.append({"role": "system", "content": "\n".join(system_parts)})
-    for item in (history or [])[-12:]:
-        role = str(item.get("role") or "user")
-        content = str(item.get("message") or "").strip()
-        if not content:
-            continue
-        mapped = "assistant" if role == "assistant" else "user"
-        messages.append({"role": mapped, "content": content[:2000]})
+    messages.extend(_history_messages(history))
     messages.append({"role": "user", "content": prompt or ""})
 
     payload = {"model": model, "messages": messages, "temperature": temperature}
@@ -150,9 +175,13 @@ def _openai_compatible_complete(
         body = exc.read().decode("utf-8", errors="replace")
         safe_body = _redact_secrets(body, [api_key])[:400]
         logger.warning("%s HTTP %s: %s", provider_label, exc.code, safe_body)
+        if exc.code == 401:
+            raise RuntimeError(f"{provider_label} authentication failed") from exc
+        if exc.code == 429:
+            raise RuntimeError(f"{provider_label} rate limit") from exc
         raise RuntimeError(f"{provider_label} HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
-        logger.warning("%s network error: %s", provider_label, exc.reason)
+        logger.warning("%s network error: %s", provider_label, getattr(exc, "reason", exc))
         raise RuntimeError(f"{provider_label} network error") from exc
 
     try:
@@ -232,8 +261,6 @@ class LocalProvider:
 
 
 class GeminiProvider:
-    """Google Gemini REST — requires AI_API_KEY."""
-
     name = "gemini"
 
     def __init__(self, api_key: str, model: str | None = None) -> None:
@@ -251,14 +278,16 @@ class GeminiProvider:
         if not self.api_key:
             raise RuntimeError("GeminiProvider requires AI_API_KEY.")
         ctx = _format_context(context)
-        hist = _format_history(history)
+        hist_lines = []
+        for m in _history_messages(history):
+            hist_lines.append(f"{m['role'].upper()}: {m['content'][:800]}")
         parts: list[str] = []
         if system:
             parts.append(system)
         if ctx:
             parts.append(f"Student context:\n{ctx}")
-        if hist:
-            parts.append(f"Recent conversation:\n{hist}")
+        if hist_lines:
+            parts.append("Recent conversation:\n" + "\n".join(hist_lines))
         parts.append(prompt or "")
         full_prompt = "\n\n".join(parts)
 
@@ -274,7 +303,7 @@ class GeminiProvider:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             body = _redact_secrets(
@@ -283,7 +312,7 @@ class GeminiProvider:
             logger.warning("Gemini HTTP %s: %s", exc.code, body)
             raise RuntimeError(f"Gemini API HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            logger.warning("Gemini network error: %s", exc.reason)
+            logger.warning("Gemini network error: %s", getattr(exc, "reason", exc))
             raise RuntimeError("Gemini API network error") from exc
 
         try:
@@ -294,8 +323,6 @@ class GeminiProvider:
 
 
 class OpenAIProvider:
-    """OpenAI Chat Completions — requires AI_API_KEY."""
-
     name = "openai"
 
     def __init__(self, api_key: str, model: str | None = None) -> None:
@@ -325,7 +352,7 @@ class OpenAIProvider:
 
 
 class GroqProvider:
-    """Groq OpenAI-compatible Chat Completions — requires GROQ_API_KEY."""
+    """Groq chat completions via official SDK when available, else HTTP."""
 
     name = "groq"
 
@@ -343,8 +370,48 @@ class GroqProvider:
     ) -> str:
         if not self.api_key:
             raise RuntimeError(
-                "GroqProvider requires GROQ_API_KEY. Set GROQ_API_KEY or use AI_PROVIDER=local."
+                "GroqProvider requires GROQ_API_KEY or AI_API_KEY when AI_PROVIDER=groq."
             )
+
+        # Prefer official groq SDK if installed.
+        try:
+            from groq import Groq  # type: ignore
+        except ImportError:
+            Groq = None  # type: ignore
+
+        if Groq is not None:
+            system_parts = [system or "You are EDUNOVA AI, a career coach."]
+            system_parts.append(
+                "Never invent skills, projects, internships, certifications, or grades."
+            )
+            system_parts.append(
+                "Answer in clear natural language for students. Do not return JSON unless asked."
+            )
+            ctx = _format_context(context)
+            if ctx:
+                system_parts.append(f"Student context: {ctx}")
+            messages: list[dict[str, str]] = [
+                {"role": "system", "content": "\n".join(system_parts)}
+            ]
+            messages.extend(_history_messages(history))
+            messages.append({"role": "user", "content": prompt or ""})
+            try:
+                client = Groq(api_key=self.api_key)
+                completion = client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.45,
+                )
+                text = completion.choices[0].message.content or ""
+                logger.info("Groq SDK success model=%s", self.model)
+                return normalize_ai_text(text)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Groq SDK failed (%s); trying HTTP. Detail: %s",
+                    type(exc).__name__,
+                    safe_ai_error_message(exc),
+                )
+
         return _openai_compatible_complete(
             url=f"{GROQ_BASE_URL}/chat/completions",
             api_key=self.api_key,
@@ -361,10 +428,8 @@ class GroqProvider:
 def get_ai_provider(app_config: Mapping[str, Any]) -> AIProvider:
     """Factory: local | gemini | openai | groq from app config."""
     provider = str(app_config.get("AI_PROVIDER", "local") or "local").strip().lower()
-    api_key = str(app_config.get("AI_API_KEY", "") or "")
-    model = str(app_config.get("AI_MODEL", "") or "") or None
-    groq_key = str(app_config.get("GROQ_API_KEY", "") or "")
-    groq_model = str(app_config.get("GROQ_MODEL", "") or "") or None
+    api_key = str(app_config.get("AI_API_KEY", "") or "").strip()
+    model = str(app_config.get("AI_MODEL", "") or "").strip() or None
 
     if provider in {"local", "demo", "local-demo"}:
         return LocalProvider()
@@ -373,7 +438,8 @@ def get_ai_provider(app_config: Mapping[str, Any]) -> AIProvider:
     if provider in {"openai", "gpt"}:
         return OpenAIProvider(api_key=api_key, model=model)
     if provider in {"groq"}:
-        return GroqProvider(api_key=groq_key or api_key, model=groq_model or model)
+        groq_key, groq_model = resolve_groq_credentials(app_config)
+        return GroqProvider(api_key=groq_key, model=groq_model)
 
     raise ValueError(
         f"Unknown AI_PROVIDER={provider!r}. Use local, gemini, openai, or groq."
@@ -381,7 +447,7 @@ def get_ai_provider(app_config: Mapping[str, Any]) -> AIProvider:
 
 
 def _provider_chain(app_config: Mapping[str, Any]) -> list[AIProvider]:
-    """Ordered unique providers: primary → other configured clouds → local."""
+    """Primary → other configured clouds → local. Never reuse Groq key as OpenAI."""
     primary_name = str(app_config.get("AI_PROVIDER", "local") or "local").strip().lower()
     chain: list[AIProvider] = []
     seen: set[str] = set()
@@ -397,37 +463,27 @@ def _provider_chain(app_config: Mapping[str, Any]) -> list[AIProvider]:
     except Exception as exc:
         logger.warning("Primary provider unavailable: %s", safe_ai_error_message(exc))
 
-    groq_key = str(app_config.get("GROQ_API_KEY", "") or "").strip()
-    openai_key = str(app_config.get("AI_API_KEY", "") or "").strip()
-    ai_model = str(app_config.get("AI_MODEL", "") or "") or None
-    groq_model = str(app_config.get("GROQ_MODEL", "") or "") or None
+    groq_key, groq_model = resolve_groq_credentials(app_config)
+    openai_or_gemini_key = str(app_config.get("AI_API_KEY", "") or "").strip()
+    ai_model = str(app_config.get("AI_MODEL", "") or "").strip() or None
+    dedicated_groq = str(app_config.get("GROQ_API_KEY", "") or "").strip()
 
-    if groq_key and primary_name != "groq":
-        _add(GroqProvider(api_key=groq_key, model=groq_model or ai_model))
+    # Only add Groq as secondary if it wasn't primary and we have a key.
+    if primary_name != "groq" and groq_key:
+        _add(GroqProvider(api_key=groq_key, model=groq_model))
 
-    # If primary is groq and it failed construction, already handled.
-    # Offer gemini/openai when AI_API_KEY present and provider not already primary.
-    if openai_key:
-        if primary_name not in {"openai", "gpt"}:
-            # Prefer openai as secondary cloud when key present; gemini also uses AI_API_KEY
-            # Only add the one matching AI_PROVIDER preference if gemini, else openai.
-            preferred_secondary = str(app_config.get("AI_FALLBACK_PROVIDER", "") or "").lower()
-            if preferred_secondary in {"gemini", "google"} or primary_name in {
-                "gemini",
-                "google",
-            }:
-                if primary_name not in {"gemini", "google"}:
-                    _add(GeminiProvider(api_key=openai_key, model=ai_model))
-            if primary_name not in {"openai", "gpt"}:
-                _add(OpenAIProvider(api_key=openai_key, model=ai_model))
-            if primary_name not in {"gemini", "google"} and preferred_secondary in {
-                "gemini",
-                "google",
-            }:
-                pass
-            elif primary_name not in {"gemini", "google"} and not preferred_secondary:
-                # Also allow gemini with same key if explicitly wanted later — skip duplicate noise
-                pass
+    # Gemini/OpenAI secondary only when primary is NOT groq using shared AI_API_KEY,
+    # OR when a dedicated GROQ_API_KEY exists so AI_API_KEY can mean OpenAI/Gemini.
+    if openai_or_gemini_key and primary_name not in {"openai", "gpt", "gemini", "google"}:
+        if primary_name == "groq" and not dedicated_groq:
+            # AI_API_KEY is the Groq key — do not also try OpenAI with it.
+            pass
+        else:
+            fallback = str(app_config.get("AI_FALLBACK_PROVIDER", "openai") or "openai").lower()
+            if fallback in {"gemini", "google"}:
+                _add(GeminiProvider(api_key=openai_or_gemini_key, model=ai_model))
+            else:
+                _add(OpenAIProvider(api_key=openai_or_gemini_key, model=ai_model))
 
     _add(LocalProvider())
     return chain
@@ -444,53 +500,51 @@ def complete_with_fallback(
     """
     Try primary then configured fallbacks once each; always return normalized text.
 
-    Returns:
-      { reply, provider, fallback_used, status_message }
+    DEMO_MODE does not force local — only AI_PROVIDER=local does.
     """
     chain = _provider_chain(app_config)
-    errors: list[str] = []
-    for idx, provider in enumerate(chain):
+    primary = str(app_config.get("AI_PROVIDER", "local") or "local").strip().lower()
+    primary_aliases = {
+        "local": {"local", "demo", "local-demo"},
+        "groq": {"groq"},
+        "openai": {"openai", "gpt"},
+        "gemini": {"gemini", "google"},
+    }
+    aliases = primary_aliases.get(primary, {primary})
+
+    logger.info(
+        "AI request primary=%s chain=%s",
+        primary,
+        [p.name for p in chain],
+    )
+
+    for provider in chain:
         try:
             reply = provider.complete(
                 prompt, system=system, context=context, history=history
             )
             reply = normalize_ai_text(reply)
-            fallback_used = idx > 0 or provider.name == "local" and str(
-                app_config.get("AI_PROVIDER", "local")
-            ).lower() not in {"local", "demo", "local-demo"}
-            # More precise: fallback if not the configured primary name
-            primary = str(app_config.get("AI_PROVIDER", "local") or "local").strip().lower()
-            primary_aliases = {
-                "local": {"local", "demo", "local-demo"},
-                "groq": {"groq"},
-                "openai": {"openai", "gpt"},
-                "gemini": {"gemini", "google"},
-            }
-            aliases = primary_aliases.get(primary, {primary})
-            is_primary = provider.name in aliases or (
-                provider.name == "local" and primary in {"local", "demo", "local-demo"}
-            )
+            is_primary = provider.name in aliases
             status = ""
             if not is_primary:
                 status = "AI provider temporarily unavailable. Using EduNova fallback."
-                fallback_used = True
+            logger.info("AI success provider=%s primary=%s", provider.name, is_primary)
             return {
                 "reply": reply,
                 "provider": provider.name,
-                "fallback_used": bool(fallback_used) and not is_primary,
+                "fallback_used": not is_primary,
                 "status_message": status,
             }
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Provider %s failed: %s", provider.name, safe_ai_error_message(exc)
+                "Provider %s failed: %s", provider.name, type(exc).__name__
             )
-            errors.append(provider.name)
             continue
 
     return {
         "reply": normalize_ai_text(
-            "I could not reach an AI provider right now. Please update your profile "
-            "skills and try again, or ask about readiness, skill gaps, or interview prep."
+            "I could not reach an AI provider right now. Please try again shortly, "
+            "or ask about readiness, skill gaps, or interview prep based on your saved profile."
         ),
         "provider": "local",
         "fallback_used": True,

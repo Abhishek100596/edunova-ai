@@ -1,6 +1,6 @@
 # EduNova AI — Feature Status
 
-Last updated after Groq / Coach / Interview / Roadmap hardening.
+Last updated after full completion audit (Groq wiring, Coach HTML, roadmap Job Applications stage).
 
 | Feature | Status | Implementation | AI / Deterministic / Hybrid | Persistence | Fallback | Tests |
 |---------|--------|----------------|----------------------------|-------------|----------|-------|
@@ -8,13 +8,13 @@ Last updated after Groq / Coach / Interview / Roadmap hardening.
 | Dashboard | Working | personalization service | Hybrid (metrics deterministic) | SQL | N/A | Partial |
 | Placement prediction | Working | sklearn + logistic fallback | Deterministic / ML | prediction_records | Coefficient fallback | Yes |
 | Explainability | Working | ml/explainability | Deterministic | N/A | Fallback model | Partial |
-| Career matching | Working | career.score_role | Deterministic | Catalog SQL | Empty catalog → empty list | Yes |
+| Career matching | Working | career.score_role / match_roles | Deterministic | Catalog SQL | Empty catalog → empty list | Yes |
 | Skill gap | Working | skill_gap service | Deterministic | SQL skills | N/A | Yes |
-| Roadmap | Working | roadmap service + stages | Hybrid (gaps deterministic; optional AI narrative later) | learning_roadmaps/tasks | Template stages | Yes |
+| Roadmap | Working | roadmap stages incl. Job Applications | Hybrid (gaps deterministic) | learning_roadmaps/tasks | Template stages | Yes |
 | Resume analysis | Working | resume_intel heuristics | Deterministic | resumes/analyses | N/A | Partial |
 | JD analyzer | Working | jd_intel | Deterministic | JD rows | N/A | Partial |
-| AI Coach | Working | coach + providers | Hybrid | ai_conversations | Local coach | Yes |
-| Mock Interview | Working | interview service | Hybrid (AI eval primary when configured) | interview_* tables | Rule-based eval | Yes |
+| AI Coach | Working | coach + Groq/OpenAI/Gemini/local | Hybrid | ai_conversations | Local coach | Yes |
+| Mock Interview | Working | interview service | Hybrid (AI eval when configured) | interview_* tables | Rule-based eval | Yes |
 | Interview Results | Working | session_detail + followup | Hybrid | SQL | Local summary | Yes |
 | Company intelligence | Working | company_intel | Deterministic | companies/requirements | Disclaimer | Yes |
 | Dream Company | Working | dream_company_analysis | Deterministic | SQL | Error payload | Yes |
@@ -34,8 +34,19 @@ Last updated after Groq / Coach / Interview / Roadmap hardening.
 | Provider | Config | Secret | Notes |
 |----------|--------|--------|-------|
 | local | `AI_PROVIDER=local` | none | Always available |
-| groq | `AI_PROVIDER=groq` | `GROQ_API_KEY` | OpenAI-compatible API |
+| groq | `AI_PROVIDER=groq` | `GROQ_API_KEY` or `AI_API_KEY` | Official SDK + HTTP; model via `GROQ_MODEL`/`AI_MODEL` (default `openai/gpt-oss-120b`) |
 | openai | `AI_PROVIDER=openai` | `AI_API_KEY` | Chat Completions |
 | gemini | `AI_PROVIDER=gemini` | `AI_API_KEY` | Gemini generateContent |
 
-Fallback order for a request: configured primary → other configured cloud keys → local.
+`DEMO_MODE` does not force local AI. Fallback order: configured primary → other configured clouds (without misusing Groq keys as OpenAI) → local.
+
+## Acceptance checklist (college demo)
+
+- [x] App starts; DB creates tables; demo seed when empty + DEMO_MODE
+- [x] Register / Login / Logout
+- [x] Dashboard, careers, placement, roadmap, interview, resume, coach pages load
+- [x] Coach uses student context + history; normalizes non-natural responses
+- [x] Groq selected when `AI_PROVIDER=groq` even if `DEMO_MODE=true`
+- [x] Roadmap includes Foundation → … → Interview → Job Applications
+- [x] `requirements.txt` includes `groq`
+- [x] Render: `Procfile`, `render.yaml`, `runtime.txt`, production `FLASK_DEBUG=false`

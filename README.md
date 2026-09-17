@@ -67,10 +67,10 @@ Copy `.env.example`. Variables used by the app:
 | `DATABASE_URL` | SQLite default or Postgres URL |
 | `DEMO_MODE` | Auto-seed empty DB + demo-friendly defaults |
 | `AI_PROVIDER` | `local` \| `gemini` \| `openai` \| `groq` |
-| `AI_API_KEY` | Server-side only (Gemini/OpenAI) |
-| `AI_MODEL` | Optional Gemini/OpenAI model name |
-| `GROQ_API_KEY` | Server-side only (Groq) — never expose to frontend |
-| `GROQ_MODEL` | Groq model id (default `llama-3.3-70b-versatile`) |
+| `AI_API_KEY` | Server-side only — Groq key when `AI_PROVIDER=groq`, else Gemini/OpenAI |
+| `AI_MODEL` | Model id (Groq default `openai/gpt-oss-120b`) |
+| `GROQ_API_KEY` | Optional dedicated Groq key (preferred locally) |
+| `GROQ_MODEL` | Optional dedicated Groq model override |
 | `PORT` / `HOST` | Runtime bind (Render sets `PORT`) |
 | `SESSION_COOKIE_SECURE` | `true` behind HTTPS |
 | `FLASK_DEBUG` | Must be `false` in production |
@@ -83,15 +83,25 @@ Local (no cloud key required):
 AI_PROVIDER=local
 ```
 
-Groq:
+Groq (recommended production — either style works):
 
 ```bash
 AI_PROVIDER=groq
-GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+AI_API_KEY=your_groq_key
+AI_MODEL=openai/gpt-oss-120b
 ```
 
-If the cloud provider fails, EduNova falls back safely (other configured cloud keys, then local). The app still starts without any AI key.
+or:
+
+```bash
+AI_PROVIDER=groq
+GROQ_API_KEY=your_groq_key
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+`DEMO_MODE=true` seeds demo catalog data only — it does **not** disable Groq.
+If the cloud provider fails, EduNova falls back safely to local coaching.
+The app still starts without any AI key.
 
 Never commit real API keys.
 

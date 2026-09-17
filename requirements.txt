@@ -1,4 +1,4 @@
-# NEXORA AI — AI-Powered Career Intelligence Platform
+# EDUNOVA AI — AI-Powered Career Intelligence Platform
 Flask==3.0.3
 Flask-Login==0.6.3
 Flask-WTF==1.2.1
@@ -19,3 +19,4 @@ reportlab==4.2.2
 pytest==8.3.2
 gunicorn==22.0.0
 psycopg2-binary==2.9.9
+groq>=0.11.0,<1
