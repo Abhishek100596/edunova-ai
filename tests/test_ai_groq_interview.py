@@ -111,8 +111,56 @@ def test_demo_mode_does_not_force_local_provider():
 
 def test_groq_missing_key_raises():
     p = GroqProvider(api_key="")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as excinfo:
         p.complete("hello")
+    msg = str(excinfo.value)
+    assert "AI_API_KEY" in msg or "GROQ_API_KEY" in msg
+    assert "gsk_" not in msg
+
+
+def test_factory_local_gemini_openai_aliases():
+    assert get_ai_provider({"AI_PROVIDER": "local"}).name == "local"
+    assert get_ai_provider({"AI_PROVIDER": "demo"}).name == "local"
+    assert get_ai_provider({"AI_PROVIDER": "local-demo"}).name == "local"
+    gem = get_ai_provider({"AI_PROVIDER": "gemini", "AI_API_KEY": "k", "AI_MODEL": "m"})
+    assert gem.name == "gemini"
+    goog = get_ai_provider({"AI_PROVIDER": "google", "AI_API_KEY": "k"})
+    assert goog.name == "gemini"
+    oai = get_ai_provider({"AI_PROVIDER": "openai", "AI_API_KEY": "k", "AI_MODEL": "gpt-4o-mini"})
+    assert oai.name == "openai"
+    gpt = get_ai_provider({"AI_PROVIDER": "gpt", "AI_API_KEY": "k"})
+    assert gpt.name == "openai"
+    with pytest.raises(ValueError) as excinfo:
+        get_ai_provider({"AI_PROVIDER": "unknown-cloud"})
+    assert "groq" in str(excinfo.value).lower()
+
+
+def test_groq_malformed_response_raises(app):
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return json.dumps({"choices": []}).encode("utf-8")
+
+    with app.app_context():
+        real_import = __import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "groq":
+                raise ImportError("no groq")
+            return real_import(name, *args, **kwargs)
+
+        with patch("urllib.request.urlopen", return_value=_Resp()):
+            with patch("builtins.__import__", side_effect=fake_import):
+                p = GroqProvider(api_key="fake-key", model="openai/gpt-oss-120b")
+                with pytest.raises(RuntimeError) as excinfo:
+                    p.complete("What next?")
+        assert "Unexpected" in str(excinfo.value)
+        assert "fake-key" not in str(excinfo.value)
 
 
 def test_groq_provider_mocked_success(app):

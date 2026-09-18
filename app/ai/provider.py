@@ -442,7 +442,8 @@ def get_ai_provider(app_config: Mapping[str, Any]) -> AIProvider:
         return GroqProvider(api_key=groq_key, model=groq_model)
 
     raise ValueError(
-        f"Unknown AI_PROVIDER={provider!r}. Use local, gemini, openai, or groq."
+        f"Unknown AI_PROVIDER={provider!r}. "
+        "Use local/demo/local-demo, gemini/google, openai/gpt, or groq."
     )
 
 
