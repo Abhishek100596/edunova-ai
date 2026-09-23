@@ -12,15 +12,23 @@ Standalone Flask platform for personalized career, skill, and evidence-based rea
 ## Features
 
 - Auth (student/admin), CSRF, hashed passwords
-- Rich demo profile + personalization engine
+- Rich demo profile + personalization engine + **AI Career Snapshot**
 - 75+ skills, 100+ companies, 20+ career roles, role roadmaps
 - Placement prediction (synthetic educational ML) + explainability
 - Skill intelligence / confidence, skill-gap matrix
 - Company intelligence, opportunity fit, dream company
 - Resume Intelligence with ATS-style heuristics
-- Mock interview with role-specific banks + local scoring
-- AI Career Coach (HTML + `/api/coach`) with cloud provider + deterministic local fallback
-- Analytics Lab, What-If, career/company compare, PDF report
+- JD Analyzer with readable fit panels + optional AI learning priorities
+- Mock interview with role-specific banks + AI/heuristic evaluation
+- AI Career Coach (HTML + `/api/coach`) with Groq primary + local fallback
+- Learning hub with **4-week AI learning planner** (gap-grounded)
+- Project mentor grounded in GitHub/manual project evidence
+- Analytics Lab, What-If (non-mutating), career/company compare, PDF report
+- Admin catalog tools + **demo health check** (no secrets exposed)
+
+EduNova combines **deterministic intelligence**, **ML**, and **generative AI** — LLMs explain and coach; they do not silently replace scores.
+
+See `docs/AI_FEATURE_REGISTRY.md` for the full AI/ML feature map.
 
 ## Technology stack
 

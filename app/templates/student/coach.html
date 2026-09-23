@@ -26,7 +26,7 @@
         {% for m in history %}
           <div class="chat-bubble {% if m.role == 'user' %}user{% else %}ai{% endif %}">
             {% if m.role == 'assistant' %}
-              {{ (m.message_html or m.message) | safe }}
+              {% if m.message_html %}{{ m.message_html|safe }}{% else %}{{ m.message }}{% endif %}
             {% else %}
               {{ m.message }}
             {% endif %}

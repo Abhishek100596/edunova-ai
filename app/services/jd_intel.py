@@ -162,17 +162,34 @@ def compare_profile_to_jd(profile: StudentProfile, text: str) -> dict[str, Any]:
     # Also surface catalog skills detected in JD text via resume_intel helper
     jd_catalog = extract_skills_from_text(text or "")
 
+    if combined >= 75:
+        label = "strong"
+    elif combined >= 50:
+        label = "moderate"
+    elif combined >= 25:
+        label = "developing"
+    else:
+        label = "early"
+
     return {
         "structured": structured,
         "tfidf_similarity": tfidf,
         "required_overlap_pct": req_overlap,
         "combined_fit_pct": combined,
+        # Template-compatible aliases (jd_analyzer.html)
+        "match_score": combined,
+        "score": combined,
+        "matched_skills": matched_required,
+        "missing_skills": missing_required,
+        "label": label,
         "matched_required": matched_required,
         "missing_required": missing_required,
         "matched_preferred": matched_preferred,
         "missing_preferred": missing_preferred,
         "student_skill_levels": student_levels,
         "jd_catalog_skills": [s["name"] for s in jd_catalog],
+        "learning_priorities": missing_required[:8],
+        "interview_topics": (missing_required[:5] + matched_required[:3])[:8],
         "how_calculated": (
             "combined_fit_pct = 0.55 * required_skill_overlap_pct + "
             "0.45 * (tfidf_cosine_similarity * 100); deterministic."

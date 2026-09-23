@@ -245,6 +245,89 @@ def recommend_next_actions(profile: StudentProfile) -> list[dict[str, Any]]:
     return unique
 
 
+def build_career_snapshot(profile: StudentProfile) -> dict[str, Any]:
+    """
+    Deterministic AI Career Snapshot for the dashboard.
+
+    Grounded only in stored profile / catalog scores — never invents facts.
+    """
+    readiness = calculate_readiness(profile)
+    matches = get_career_matches(profile, limit=3)
+    roadmap = get_roadmap_progress(profile)
+    interview = get_interview_summary(profile)
+    resume = get_resume_summary(profile)
+    components = readiness.get("components") or {}
+
+    strengths: list[str] = []
+    for key, label in (
+        ("skill", "Skill readiness"),
+        ("academic", "Academic readiness"),
+        ("project", "Project readiness"),
+        ("experience", "Experience readiness"),
+        ("certification", "Certification readiness"),
+        ("interview", "Interview readiness"),
+    ):
+        val = float(components.get(key) or 0)
+        if val >= 70:
+            strengths.append(f"{label} is comparatively strong ({val:.0f}/100).")
+
+    gaps: list[str] = []
+    if matches:
+        top = matches[0]
+        missing = top.get("gaps") or top.get("missing_skills") or []
+        for item in list(missing)[:4]:
+            name = item.get("skill_name") if isinstance(item, dict) else str(item)
+            gaps.append(f"Gap toward {top.get('role_name')}: {name}")
+    weak_components = sorted(
+        ((k, float(v or 0)) for k, v in components.items()),
+        key=lambda x: x[1],
+    )
+    for key, val in weak_components[:2]:
+        if val < 60:
+            gaps.append(f"{key.replace('_', ' ').title()} readiness is {val:.0f}/100.")
+
+    top_role = matches[0]["role_name"] if matches else None
+    priority = (
+        f"Focus on closing gaps for {top_role}."
+        if top_role and gaps
+        else "Complete onboarding and add skills to unlock sharper recommendations."
+    )
+    project_idea = (
+        f"Build a small portfolio project that demonstrates skills needed for {top_role}."
+        if top_role
+        else "Add a project that showcases your strongest skill."
+    )
+    interview_focus = (
+        f"Practice mock interviews for {top_role}."
+        if top_role
+        else "Start a short technical mock interview."
+    )
+    if interview.get("average_score") is not None:
+        interview_focus += f" Latest average score: {interview['average_score']}."
+
+    learning = (
+        f"Continue roadmap “{roadmap.get('title')}” ({roadmap.get('progress_pct')}%)."
+        if roadmap.get("has_roadmap")
+        else "Generate a learning roadmap from your skill gaps."
+    )
+    if not resume.get("has_resume"):
+        learning += " Upload a resume for ATS-style feedback."
+
+    return {
+        "strongest_areas": strengths[:4]
+        or ["Keep building profile evidence — strengths will appear as scores rise."],
+        "biggest_gaps": gaps[:5] or ["No major catalog gaps detected yet."],
+        "next_priority": priority,
+        "project_to_build": project_idea,
+        "interview_focus": interview_focus,
+        "recommended_learning": learning,
+        "source": "deterministic",
+        "disclaimer": (
+            "Snapshot is derived from your saved EduNova data — educational estimate only."
+        ),
+    }
+
+
 def dashboard_intelligence(profile: StudentProfile) -> dict[str, Any]:
     readiness = calculate_readiness(profile)
     matches = get_career_matches(profile, limit=3)
@@ -261,6 +344,7 @@ def dashboard_intelligence(profile: StudentProfile) -> dict[str, Any]:
         "skill_confidence": compute_skill_confidence(profile)[:8],
         "actions": recommend_next_actions(profile),
         "history": get_readiness_history(profile),
+        "career_snapshot": build_career_snapshot(profile),
         "tracked_companies": [
             {
                 "id": t.id,

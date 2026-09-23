@@ -249,6 +249,7 @@ def what_if():
     profile = ensure_student_profile()
     form = WhatIfForm()
     result = None
+    explanation = None
     skill_names = [
         s.name
         for s in Skill.query.order_by(Skill.name).all()
@@ -268,8 +269,8 @@ def what_if():
                         form.skill_name.data.strip(),
                         int(form.new_level.data or 3),
                     )
-                except Exception as exc:  # noqa: BLE001
-                    flash(f"Simulation failed: {exc}", "danger")
+                except Exception:  # noqa: BLE001
+                    flash("Simulation failed. Please check your inputs and try again.", "danger")
         else:
             sim = _try_import("what_if", "simulate_extra_projects")
             if sim is None:
@@ -277,14 +278,35 @@ def what_if():
             else:
                 try:
                     result = sim(profile, int(form.extra_projects.data or 1))
-                except Exception as exc:  # noqa: BLE001
-                    flash(f"Simulation failed: {exc}", "danger")
+                except Exception:  # noqa: BLE001
+                    flash("Simulation failed. Please check your inputs and try again.", "danger")
+
+        if result:
+            try:
+                from app.services.ai_insights import generate_narrative
+                from app.services.coach import build_student_context
+
+                delta_r = result.get("delta_overall_readiness")
+                delta_p = result.get("delta_placement_probability")
+                prompt = (
+                    "Explain this educational what-if simulation in plain language. "
+                    f"Scenario note: {result.get('note')}. "
+                    f"Readiness delta: {delta_r}. Placement probability delta: {delta_p}. "
+                    "Emphasize this is not a hiring guarantee and the profile was not changed."
+                )
+                narrative = generate_narrative(
+                    prompt, context=build_student_context(profile)
+                )
+                explanation = narrative.get("reply_html")
+            except Exception:  # noqa: BLE001
+                explanation = None
 
     return render_template(
         "student/what_if.html",
         form=form,
         profile=profile,
         result=result,
+        explanation=explanation,
         skill_names=skill_names,
         disclaimer="Scenario simulation only — does not change your saved profile.",
     )
@@ -372,6 +394,7 @@ def jd_analyzer():
     form = JDAnalyzerForm()
     structured = None
     comparison = None
+    explanation = None
 
     if form.validate_on_submit():
         extract = _try_import("jd_intel", "extract_jd_structured")
@@ -384,9 +407,33 @@ def jd_analyzer():
                     structured = extract(form.raw_text.data)
                 if compare:
                     comparison = compare(profile, form.raw_text.data)
+                    if comparison and comparison.get("structured") and not structured:
+                        structured = comparison["structured"]
                 flash("JD analysis complete.", "success")
-            except Exception as exc:  # noqa: BLE001
-                flash(f"JD analysis failed: {exc}", "danger")
+            except Exception:  # noqa: BLE001
+                flash("JD analysis failed. Please try again with a clearer job description.", "danger")
+
+        if comparison:
+            try:
+                from app.services.ai_insights import generate_narrative
+                from app.services.coach import build_student_context
+
+                missing = comparison.get("missing_required") or []
+                matched = comparison.get("matched_required") or []
+                fit = comparison.get("combined_fit_pct")
+                prompt = (
+                    "Explain this educational JD comparison for the student. "
+                    f"Fit estimate: {fit}%. Matched required skills: {', '.join(matched[:10]) or 'none'}. "
+                    f"Missing required skills: {', '.join(missing[:10]) or 'none'}. "
+                    "Suggest learning priorities and one project idea. "
+                    "Do not invent experience. Do not claim the student will be hired."
+                )
+                narrative = generate_narrative(
+                    prompt, context=build_student_context(profile)
+                )
+                explanation = narrative.get("reply_html")
+            except Exception:  # noqa: BLE001
+                explanation = None
 
     return render_template(
         "student/jd_analyzer.html",
@@ -394,6 +441,7 @@ def jd_analyzer():
         profile=profile,
         structured=structured,
         comparison=comparison,
+        explanation=explanation,
         disclaimer=COMPAT_DISCLAIMER,
     )
 

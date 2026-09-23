@@ -63,6 +63,48 @@
   </article>
 </div>
 
+{% if career_snapshot %}
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <h3>AI Career Snapshot</h3>
+    <span class="badge badge-ai">Profile-grounded</span>
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Strongest areas</strong></p>
+      <ul>
+        {% for s in career_snapshot.strongest_areas[:4] %}
+          <li style="font-size:0.9rem;">{{ s }}</li>
+        {% endfor %}
+      </ul>
+      <p class="mb-1 mt-2" style="font-size:0.85rem;"><strong>Biggest gaps</strong></p>
+      <ul>
+        {% for g in career_snapshot.biggest_gaps[:4] %}
+          <li style="font-size:0.9rem;">{{ g }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <p class="mb-1"><strong>Next priority</strong></p>
+      <p>{{ career_snapshot.next_priority }}</p>
+      <p class="mb-1"><strong>One project to build</strong></p>
+      <p>{{ career_snapshot.project_to_build }}</p>
+      <p class="mb-1"><strong>Interview focus</strong></p>
+      <p>{{ career_snapshot.interview_focus }}</p>
+      <p class="mb-1"><strong>Recommended learning</strong></p>
+      <p>{{ career_snapshot.recommended_learning }}</p>
+      <div class="btn-group mt-1">
+        <a href="{{ url_for('student.coach') }}" class="btn btn-sm btn-ai">Ask AI Coach</a>
+        <a href="{{ url_for('student.learning') }}" class="btn btn-sm btn-glass">Learning plan</a>
+      </div>
+    </div>
+  </div>
+  {% if career_snapshot.disclaimer %}
+    <p class="form-hint mt-2 mb-0">{{ career_snapshot.disclaimer }}</p>
+  {% endif %}
+</article>
+{% endif %}
+
 <div class="grid grid-2 mb-2">
   <article class="glass-card">
     <div class="card-header">

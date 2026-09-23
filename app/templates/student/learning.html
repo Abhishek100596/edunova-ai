@@ -7,7 +7,7 @@
   <div>
     <p class="eyebrow">AI tools</p>
     <h1>Learning hub</h1>
-    <p>All roadmaps and completed task progress in one place.</p>
+    <p>Roadmaps plus a personalized 4-week learning planner grounded in your skill gaps.</p>
   </div>
   <a href="{{ url_for('student.roadmap') }}" class="btn btn-ai">Open roadmaps</a>
 </div>
@@ -26,6 +26,57 @@
     <div class="stat-value">{{ profile.onboarding_pct|default(0) }}%</div>
   </article>
 </div>
+
+<article class="glass-card mb-2">
+  <div class="card-header"><h3>AI learning planner</h3></div>
+  <form method="post" data-loading>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label" for="role_id">Target role</label>
+      <select class="form-control" name="role_id" id="role_id">
+        <option value="">Auto (top career match)</option>
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if selected_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-ai" name="generate" value="1">Generate 4-week plan</button>
+  </form>
+
+  {% if plan and plan.ok %}
+  <div class="mt-2">
+    <h3 class="mb-1">{{ plan.goal }}</h3>
+    {% if narrative_html %}
+      <div class="coach-bubble assistant mb-2">{{ narrative_html|safe }}</div>
+    {% endif %}
+    {% if plan.gaps %}
+      <p class="mb-1" style="font-size:0.85rem;"><strong>Skill gaps addressed</strong></p>
+      {% for g in plan.gaps[:10] %}<span class="skill-pill gap-missing">{{ g }}</span>{% endfor %}
+    {% endif %}
+    <p class="mt-2 mb-1" style="font-size:0.85rem;"><strong>Mini-project</strong></p>
+    <p>{{ plan.mini_project }}</p>
+    <div class="roadmap-timeline mt-2">
+      {% for week in plan.weeks %}
+      <div class="roadmap-item">
+        <div class="card-header">
+          <h3 class="mb-0">Week {{ week.week }} — {{ week.theme }}</h3>
+          <span class="badge badge-ai">~{{ week.estimated_hours }}h</span>
+        </div>
+        <p class="mb-1"><strong>Focus:</strong> {{ week.focus_skill }}</p>
+        <ul>
+          {% for t in week.daily_tasks %}<li>{{ t }}</li>{% endfor %}
+        </ul>
+        <p class="mb-1 text-muted" style="font-size:0.85rem;"><strong>Practice:</strong> {{ week.practice }}</p>
+        <p class="mb-0 text-muted" style="font-size:0.85rem;"><strong>Checkpoint:</strong> {{ week.checkpoint }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="form-hint mt-2 mb-0">{{ plan.disclaimer }}</p>
+  </div>
+  {% elif plan and not plan.ok %}
+    <p class="text-muted mt-2">{{ plan.goal }}</p>
+  {% endif %}
+</article>
 
 <article class="glass-card">
   <div class="card-header"><h3>Your roadmaps</h3></div>
@@ -47,7 +98,7 @@
   {% else %}
     <div class="empty-state">
       <p>No roadmaps yet — generate one from skill gaps.</p>
-      <span class="demo-badge">Demo Preview</span>
+      <a href="{{ url_for('student.roadmap') }}" class="btn btn-sm btn-ai">Generate roadmap</a>
     </div>
   {% endif %}
 </article>

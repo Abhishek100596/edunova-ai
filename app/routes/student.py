@@ -190,6 +190,7 @@ def dashboard():
         intelligence_score=intelligence_score,
         biggest_gap=biggest_gap,
         next_actions=next_actions,
+        career_snapshot=(intel or {}).get("career_snapshot"),
         dash=intel,
         opportunities=(intel or {}).get("opportunities") or [],
         history=(intel or {}).get("history") or {},
@@ -950,6 +951,37 @@ def projects():
     certs = Certification.query.filter_by(student_id=profile.id).all()
     interns = Internship.query.filter_by(student_id=profile.id).all()
     role_recs = CareerRole.query.order_by(CareerRole.name).limit(5).all()
+
+    mentor_reports: dict[int, dict] = {}
+    mentor_narratives: dict[int, str] = {}
+    try:
+        from app.services.project_mentor import mentor_project
+
+        for p in items:
+            mentor_reports[p.id] = mentor_project(p, profile)
+    except Exception:  # noqa: BLE001
+        mentor_reports = {}
+
+    mentor_id = request.args.get("mentor", type=int)
+    if mentor_id and mentor_id in mentor_reports:
+        try:
+            from app.services.ai_insights import generate_narrative
+            from app.services.coach import build_student_context
+
+            report = mentor_reports[mentor_id]
+            prompt = (
+                "Act as a project mentor. Using ONLY this evidence, give concise improvement advice. "
+                f"Title: {report.get('title')}. Strengths: {report.get('strengths')}. "
+                f"Weaknesses: {report.get('weaknesses')}. "
+                "Do not invent features that are not listed."
+            )
+            narrative = generate_narrative(
+                prompt, context=build_student_context(profile)
+            )
+            mentor_narratives[mentor_id] = narrative.get("reply_html") or ""
+        except Exception:  # noqa: BLE001
+            pass
+
     return render_template(
         "student/projects.html",
         form=form,
@@ -959,10 +991,13 @@ def projects():
         internships=interns,
         role_recs=role_recs,
         profile=profile,
+        mentor_reports=mentor_reports,
+        mentor_narratives=mentor_narratives,
+        active_mentor_id=mentor_id,
     )
 
 
-@bp.route("/learning")
+@bp.route("/learning", methods=["GET", "POST"])
 @student_required
 def learning():
     profile = ensure_student_profile()
@@ -980,11 +1015,42 @@ def learning():
         )
         .count()
     )
+    plan = None
+    narrative_html = None
+    roles = CareerRole.query.order_by(CareerRole.name).all()
+    selected_role_id = request.values.get("role_id", type=int)
+
+    if request.method == "POST" or request.args.get("generate") == "1":
+        from app.services.learning_planner import build_learning_plan
+
+        role = db.session.get(CareerRole, selected_role_id) if selected_role_id else None
+        plan = build_learning_plan(profile, role, weeks=4)
+        try:
+            from app.services.ai_insights import generate_narrative
+            from app.services.coach import build_student_context
+
+            gaps = ", ".join(plan.get("gaps") or []) or "none listed"
+            prompt = (
+                "Write a short motivational learning overview for this 4-week educational plan. "
+                f"Goal: {plan.get('goal')}. Skill gaps to close: {gaps}. "
+                "Keep it under 180 words. Do not invent certifications or experience."
+            )
+            narrative = generate_narrative(
+                prompt, context=build_student_context(profile)
+            )
+            narrative_html = narrative.get("reply_html")
+        except Exception:  # noqa: BLE001
+            narrative_html = None
+
     return render_template(
         "student/learning.html",
         roadmaps=maps,
         tasks_done=tasks_done,
         profile=profile,
+        plan=plan,
+        narrative_html=narrative_html,
+        roles=roles,
+        selected_role_id=selected_role_id,
     )
 
 

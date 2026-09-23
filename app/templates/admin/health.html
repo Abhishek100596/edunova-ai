@@ -1,0 +1,44 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}System Health — EDUNOVA AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Control</p>
+    <h1>Demo health check</h1>
+    <p>Verify database, AI configuration, ML artifacts, and critical templates before a presentation.</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-glass">Back</a>
+</div>
+
+<article class="glass-card mb-2">
+  <div class="card-header">
+    <h3>Overall</h3>
+    {% if report.ok %}
+      <span class="badge badge-ai">Ready</span>
+    {% else %}
+      <span class="badge" style="background:#7f1d1d;">Needs attention</span>
+    {% endif %}
+  </div>
+  <p class="mb-1"><strong>AI provider:</strong> {{ report.provider }}</p>
+  {% if report.model %}<p class="mb-1"><strong>Model:</strong> {{ report.model }}</p>{% endif %}
+  <p class="mb-0"><strong>DEMO_MODE:</strong> {{ report.demo_mode }} · <strong>FLASK_ENV:</strong> {{ report.flask_env }}</p>
+  <p class="form-hint mt-2 mb-0">API keys are never displayed on this page.</p>
+</article>
+
+<article class="glass-card">
+  <div class="card-header"><h3>Checks</h3></div>
+  <ul class="action-list">
+    {% for c in report.checks %}
+    <li>
+      <span class="step">{% if c.ok %}✓{% else %}!{% endif %}</span>
+      <div>
+        <strong>{{ c.name|replace('_',' ')|title }}</strong>
+        <p class="mb-0 text-muted" style="font-size:0.85rem;">{{ c.detail }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</article>
+{% endblock %}

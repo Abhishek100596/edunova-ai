@@ -188,3 +188,12 @@ def evidence_sources():
             EvidenceSource.source_priority.desc(), EvidenceSource.title.asc()
         ).all()
     return render_template("admin/evidence_sources.html", sources=rows)
+
+
+@bp.route("/health")
+def health():
+    """Presentation health check — never shows secrets."""
+    from app.services.healthcheck import run_health_checks
+
+    report = run_health_checks()
+    return render_template("admin/health.html", report=report)

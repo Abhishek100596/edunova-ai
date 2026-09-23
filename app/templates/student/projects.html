@@ -116,6 +116,28 @@
       </div>
     {% endif %}
     {% if p.url %}<a href="{{ p.url }}" class="btn btn-sm btn-glass mt-1" target="_blank" rel="noopener">Open link</a>{% endif %}
+    {% set mentor = mentor_reports.get(p.id) if mentor_reports is defined else none %}
+    {% if mentor %}
+      <div class="mt-2">
+        <div class="card-header" style="padding-left:0;padding-right:0;">
+          <h3 class="mb-0" style="font-size:1rem;">Project mentor</h3>
+          <a class="btn btn-sm btn-ai" href="{{ url_for('student.projects', mentor=p.id) }}">AI advice</a>
+        </div>
+        <p class="mb-1" style="font-size:0.85rem;">{{ mentor.summary }}</p>
+        {% if mentor.strengths %}
+          <p class="mb-1" style="font-size:0.8rem;"><strong>Strengths</strong></p>
+          <ul>{% for s in mentor.strengths[:4] %}<li style="font-size:0.82rem;">{{ s }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if mentor.improvements %}
+          <p class="mb-1" style="font-size:0.8rem;"><strong>Improvements</strong></p>
+          <ul>{% for s in mentor.improvements[:4] %}<li style="font-size:0.82rem;">{{ s }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if active_mentor_id == p.id and mentor_narratives and mentor_narratives.get(p.id) %}
+          <div class="coach-bubble assistant mt-1">{{ mentor_narratives.get(p.id)|safe }}</div>
+        {% endif %}
+        <p class="form-hint mb-0">{{ mentor.disclaimer }}</p>
+      </div>
+    {% endif %}
   </article>
   {% endfor %}
 </div>

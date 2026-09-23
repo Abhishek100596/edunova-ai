@@ -44,41 +44,85 @@
   </form>
 </article>
 
-{% if result %}
+{% if result and result is mapping %}
 <article class="glass-card mt-2">
-  <div class="card-header"><h3>Simulation result</h3>
-    <span class="badge badge-ai">Scenario</span>
+  <div class="card-header">
+    <h3>Simulation result</h3>
+    <span class="badge badge-ai">Scenario only</span>
   </div>
-  {% if result is mapping %}
-    <div class="grid grid-2">
-      {% if result.baseline is defined %}
-      <div class="card-solid">
-        <div class="stat-label">Baseline</div>
-        <div class="stat-value">{{ result.baseline }}</div>
+  <p class="text-muted" style="font-size:0.9rem;">{{ result.note or result.notes or '' }}</p>
+
+  <div class="grid grid-2 mt-2">
+    <div class="card-solid">
+      <div class="stat-label">Baseline readiness</div>
+      <div class="stat-value">
+        {% if result.baseline is mapping %}
+          {{ '%.1f'|format(result.baseline.overall_readiness|default(0)) }}
+        {% else %}—{% endif %}
       </div>
-      {% endif %}
-      {% if result.simulated is defined or result.projected is defined %}
-      <div class="card-solid">
-        <div class="stat-label">Simulated</div>
-        <div class="stat-value text-primary">{{ result.simulated or result.projected }}</div>
-      </div>
+      {% if result.baseline is mapping and result.baseline.placement_probability_estimate is defined %}
+        <p class="mb-0 text-muted" style="font-size:0.82rem;">
+          Placement estimate: {{ '%.1f'|format((result.baseline.placement_probability_estimate|default(0)) * 100) }}%
+        </p>
       {% endif %}
     </div>
-    {% if result.delta is defined %}
-      <p class="mt-2">Delta: <strong>{{ result.delta }}</strong></p>
-    {% endif %}
-    {% if result.notes %}
-      <p class="text-muted" style="font-size:0.9rem;">{{ result.notes if result.notes is string else result.notes|join(' · ') }}</p>
-    {% endif %}
-    {% if result.readiness is defined %}
-      <p>Projected readiness: {{ result.readiness }}</p>
-    {% endif %}
-    {% if result.disclaimer %}
-      <p class="form-hint mt-2 mb-0">{{ result.disclaimer }}</p>
-    {% endif %}
-  {% else %}
-    <p>{{ result }}</p>
+    <div class="card-solid">
+      <div class="stat-label">Simulated readiness</div>
+      <div class="stat-value text-primary">
+        {% if result.simulated is mapping %}
+          {{ '%.1f'|format(result.simulated.overall_readiness|default(0)) }}
+        {% else %}—{% endif %}
+      </div>
+      {% if result.simulated is mapping and result.simulated.placement_probability_estimate is defined %}
+        <p class="mb-0 text-muted" style="font-size:0.82rem;">
+          Placement estimate: {{ '%.1f'|format((result.simulated.placement_probability_estimate|default(0)) * 100) }}%
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-2 mt-2">
+    <p class="mb-0"><strong>Δ readiness:</strong>
+      {% if result.delta_overall_readiness is defined %}
+        {{ '%+.1f'|format(result.delta_overall_readiness) }}
+      {% elif result.delta is defined %}{{ result.delta }}{% else %}—{% endif %}
+    </p>
+    <p class="mb-0"><strong>Δ placement probability:</strong>
+      {% if result.delta_placement_probability is defined %}
+        {{ '%+.2f'|format(result.delta_placement_probability * 100) }} pts
+      {% else %}—{% endif %}
+    </p>
+  </div>
+
+  {% if result.baseline is mapping and result.baseline.readiness_components is mapping
+     and result.simulated is mapping and result.simulated.readiness_components is mapping %}
+  <div class="mt-2">
+    <p class="mb-1" style="font-size:0.85rem;"><strong>Component change</strong></p>
+    <ul class="action-list">
+      {% for key in ['academic','skill','project','experience','certification','interview'] %}
+      <li>
+        <span class="step">{{ loop.index }}</span>
+        <div>
+          <strong>{{ key|title }}</strong>
+          <p class="mb-0 text-muted" style="font-size:0.85rem;">
+            {{ '%.0f'|format(result.baseline.readiness_components.get(key, 0)) }}
+            → {{ '%.0f'|format(result.simulated.readiness_components.get(key, 0)) }}
+          </p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
+
+  {% if explanation %}
+  <div class="mt-2">
+    <p class="mb-1"><strong>Plain-language explanation</strong></p>
+    <div class="coach-bubble assistant">{{ explanation|safe }}</div>
+  </div>
+  {% endif %}
+
+  <p class="form-hint mt-2 mb-0">{{ result.disclaimer or disclaimer }}</p>
 </article>
 {% endif %}
 {% endblock %}

@@ -154,10 +154,20 @@ def normalize_ai_text(raw: Any) -> str:
         text = "\n".join(f"• {extract_text_from_response(x)}" for x in structured)
     text = clean_markdown(text)
     # Final guard: if still looks like a bare dict string, soften it
-    if (text.startswith("{") and "'answer'" in text) or text.startswith('{"'):
+    if (text.startswith("{") and ("'answer'" in text or '"answer"' in text)) or text.startswith(
+        '{"'
+    ):
         again = _try_parse_structured(text)
         if isinstance(again, dict):
             text = _dict_to_readable(again)
+    # Soften accidental Python dict reprs that literal_eval couldn't parse
+    if text.startswith("{") and ("': " in text or "':\n" in text):
+        softened = text
+        for token in ("{", "}", "'"):
+            softened = softened.replace(token, " ")
+        softened = re.sub(r"\s+", " ", softened).strip()
+        if softened and len(softened) > 8:
+            text = softened
     return text.strip()
 
 

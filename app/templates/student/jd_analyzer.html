@@ -40,47 +40,75 @@
 
 {% if structured or comparison %}
 <div class="grid grid-2 mt-2">
-  {% if structured %}
+  {% if structured and structured is mapping %}
   <article class="glass-card">
     <div class="card-header"><h3>Extracted structure</h3></div>
-    {% if structured is mapping %}
-      {% for key, val in structured.items() %}
-        <p class="mb-1"><strong>{{ key|replace('_',' ')|title }}:</strong>
-          {% if val is sequence and val is not string %}
-            {{ val|join(', ') }}
-          {% else %}
-            {{ val }}
-          {% endif %}
-        </p>
+    {% if structured.role %}<p class="mb-1"><strong>Role:</strong> {{ structured.role }}</p>{% endif %}
+    {% if structured.seniority %}<p class="mb-1"><strong>Seniority:</strong> {{ structured.seniority }}</p>{% endif %}
+    {% if structured.location %}<p class="mb-1"><strong>Location:</strong> {{ structured.location }}</p>{% endif %}
+    {% if structured.skills_required %}
+      <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Required skills</strong></p>
+      {% for s in structured.skills_required[:16] %}
+        <span class="skill-pill">{{ s }}</span>
       {% endfor %}
-    {% else %}
-      <pre>{{ structured }}</pre>
+    {% endif %}
+    {% if structured.skills_preferred %}
+      <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Preferred skills</strong></p>
+      {% for s in structured.skills_preferred[:12] %}
+        <span class="skill-pill">{{ s }}</span>
+      {% endfor %}
+    {% endif %}
+    {% if structured.notes %}
+      <p class="form-hint mt-2 mb-0">{{ structured.notes }}</p>
     {% endif %}
   </article>
   {% endif %}
-  {% if comparison %}
+
+  {% if comparison and comparison is mapping %}
   <article class="glass-card">
     <div class="card-header">
       <h3>Profile fit</h3>
       {% if comparison.label %}{{ fit_badge(comparison.label) }}{% endif %}
     </div>
-    {% if comparison.match_score is defined or comparison.score is defined %}
-      <div class="stat-value text-primary">{{ '%.0f'|format(comparison.match_score or comparison.score) }}{% if (comparison.match_score or comparison.score) <= 1 %}{% else %}%{% endif %}</div>
+    {% set fit = comparison.combined_fit_pct if comparison.combined_fit_pct is defined else (comparison.match_score or comparison.score) %}
+    {% if fit is not none %}
+      <div class="stat-value text-primary">{{ '%.0f'|format(fit) }}%</div>
+      <p class="text-muted" style="font-size:0.82rem;">Educational fit estimate (skill overlap + text similarity)</p>
     {% endif %}
-    {% if comparison.missing_skills %}
+    {% set missing = comparison.missing_required or comparison.missing_skills or [] %}
+    {% set matched = comparison.matched_required or comparison.matched_skills or [] %}
+    {% if missing %}
       <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Missing</strong></p>
-      {% for s in comparison.missing_skills[:12] %}
-        <span class="skill-pill gap-missing">{% if s is mapping %}{{ s.name or s.skill }}{% else %}{{ s }}{% endif %}</span>
+      {% for s in missing[:12] %}
+        <span class="skill-pill gap-missing">{% if s is mapping %}{{ s.name or s.skill or s.skill_name }}{% else %}{{ s }}{% endif %}</span>
       {% endfor %}
     {% endif %}
-    {% if comparison.matched_skills %}
+    {% if matched %}
       <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Matched</strong></p>
-      {% for s in comparison.matched_skills[:12] %}
-        <span class="skill-pill gap-have">{% if s is mapping %}{{ s.name or s.skill }}{% else %}{{ s }}{% endif %}</span>
+      {% for s in matched[:12] %}
+        <span class="skill-pill gap-have">{% if s is mapping %}{{ s.name or s.skill or s.skill_name }}{% else %}{{ s }}{% endif %}</span>
       {% endfor %}
+    {% endif %}
+    {% if comparison.interview_topics %}
+      <p class="mb-1 mt-2" style="font-size:0.8rem;"><strong>Interview prep topics</strong></p>
+      <ul class="action-list">
+        {% for t in comparison.interview_topics[:6] %}
+        <li><span class="step">{{ loop.index }}</span><div>{{ t }}</div></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if comparison.disclaimer %}
+      <p class="form-hint mt-2 mb-0">{{ comparison.disclaimer }}</p>
     {% endif %}
   </article>
   {% endif %}
 </div>
+
+{% if explanation %}
+<article class="glass-card mt-2">
+  <div class="card-header"><h3>Learning priorities (AI explanation)</h3></div>
+  <div class="coach-bubble assistant">{{ explanation|safe }}</div>
+</article>
+{% endif %}
 {% endif %}
 {% endblock %}
