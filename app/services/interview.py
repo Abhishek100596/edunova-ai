@@ -366,6 +366,12 @@ def submit_answer(
     if session.status == "completed":
         raise ValueError("This interview session is already completed.")
 
+    cleaned = (answer_text or "").strip()
+    if not cleaned:
+        raise ValueError("Please enter an answer before submitting.")
+    if len(cleaned) > 5000:
+        cleaned = cleaned[:5000]
+
     try:
         keywords = json.loads(question.expected_keywords or "[]")
     except json.JSONDecodeError:
@@ -378,7 +384,7 @@ def submit_answer(
     profile = db.session.get(StudentProfile, session.student_id)
     evaluation = evaluate_answer_with_ai(
         question_prompt=question.prompt,
-        answer_text=answer_text or "",
+        answer_text=cleaned,
         interview_type=session.interview_type or "behavioral",
         role_focus=session.role_focus,
         keywords=list(keywords),
@@ -390,7 +396,7 @@ def submit_answer(
         answer = InterviewAnswer(question_id=question.id)
         db.session.add(answer)
 
-    answer.answer_text = answer_text or ""
+    answer.answer_text = cleaned
     answer.score = evaluation["score"]
     answer.feedback = normalize_ai_text(evaluation["feedback"])
     answer.keyword_coverage = evaluation.get("keyword_coverage")
@@ -519,6 +525,7 @@ def session_detail(session_id: int, *, student_id: int | None = None) -> dict[st
         "dimensions": dims,
         "question_count": len(questions),
         "answered_count": answered,
+        "current_question_id": current.id if current else None,
         "current_question_number": (current.order_index + 1) if current else len(questions),
         "questions": [
             {

@@ -617,7 +617,7 @@ def resume():
                 file_ext=ext,
             )
             db.session.add(resume_row)
-            db.session.commit()
+            db.session.flush()
             analysis = resume_svc.analyze_resume(resume_row, path)
             flash(
                 f"Resume analyzed — completeness {analysis.completeness_score:.0f}/100.",
@@ -625,7 +625,16 @@ def resume():
             )
             jd_form.resume_id.data = resume_row.id
         except ValueError as exc:
+            db.session.rollback()
             flash(str(exc), "danger")
+        except Exception:  # noqa: BLE001
+            db.session.rollback()
+            current_app.logger.exception("Resume upload/analysis failed")
+            flash(
+                "Something went wrong while analyzing your resume. "
+                "Your profile was not changed — please try another file.",
+                "danger",
+            )
 
     if jd_form.validate_on_submit() and "match" in request.form:
         resume_row = db.session.get(Resume, jd_form.resume_id.data)

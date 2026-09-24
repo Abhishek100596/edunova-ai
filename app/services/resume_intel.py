@@ -28,20 +28,58 @@ SECTION_PATTERNS = {
 
 def extract_text_from_pdf(path: Path) -> str:
     from PyPDF2 import PdfReader
+    from PyPDF2.errors import FileNotDecryptedError, PdfReadError
 
-    reader = PdfReader(str(path))
+    try:
+        reader = PdfReader(str(path))
+    except PdfReadError as exc:
+        raise ValueError(
+            "This PDF could not be read. It may be corrupt or not a valid resume file."
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(
+            "Could not open this PDF. Please try another file or export as DOCX."
+        ) from exc
+
+    if getattr(reader, "is_encrypted", False):
+        try:
+            # Empty password attempt for soft-encrypted PDFs
+            reader.decrypt("")
+        except Exception:  # noqa: BLE001
+            raise ValueError(
+                "This PDF is password-protected. Please upload an unlocked copy."
+            ) from None
+        if getattr(reader, "is_encrypted", False):
+            raise ValueError(
+                "This PDF is password-protected. Please upload an unlocked copy."
+            )
+
     chunks: list[str] = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        if text.strip():
-            chunks.append(text)
+    try:
+        for page in reader.pages:
+            try:
+                text = page.extract_text() or ""
+            except Exception:  # noqa: BLE001
+                text = ""
+            if text.strip():
+                chunks.append(text)
+    except FileNotDecryptedError as exc:
+        raise ValueError(
+            "This PDF is password-protected. Please upload an unlocked copy."
+        ) from exc
+
     return "\n".join(chunks).strip()
 
 
 def extract_text_from_docx(path: Path) -> str:
     from docx import Document
 
-    doc = Document(str(path))
+    try:
+        doc = Document(str(path))
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(
+            "This DOCX could not be read. It may be corrupt or not a valid Word file."
+        ) from exc
     parts = [p.text.strip() for p in doc.paragraphs if p.text and p.text.strip()]
     return "\n".join(parts).strip()
 
@@ -49,10 +87,17 @@ def extract_text_from_docx(path: Path) -> str:
 def extract_text(path: Path, file_ext: str | None = None) -> str:
     ext = (file_ext or path.suffix.lstrip(".")).lower()
     if ext == "pdf":
-        return extract_text_from_pdf(path)
-    if ext == "docx":
-        return extract_text_from_docx(path)
-    raise ValueError(f"Unsupported resume extension: {ext!r}")
+        text = extract_text_from_pdf(path)
+    elif ext == "docx":
+        text = extract_text_from_docx(path)
+    else:
+        raise ValueError("Unsupported file type. Please upload a PDF or DOCX resume.")
+    if not text:
+        raise ValueError(
+            "No readable text was found in that file. "
+            "Try a text-based PDF/DOCX (not a scanned image)."
+        )
+    return text
 
 
 def extract_skills_from_text(text: str) -> list[dict[str, Any]]:

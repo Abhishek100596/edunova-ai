@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}AI Coach — EDUNOVA AI{% endblock %}
 
@@ -40,6 +41,7 @@
     </div>
     <form method="post" data-loading class="mt-2" id="coach-form">
       {{ form.hidden_tag() }}
+      {{ form_errors(form) }}
       <div class="form-group mb-1">
         {{ form.message.label(class_="form-label") }}
         {{ form.message(class_="form-textarea", rows="3", placeholder="e.g. What should I learn next?", id="coach-message") }}

@@ -13,6 +13,7 @@ from app.ai.provider import (
 from app.ai.response import (
     format_interview_evaluation,
     markdown_to_safe_html,
+    normalize_ai_response,
     normalize_ai_text,
     safe_ai_error_message,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "complete_with_fallback",
     "resolve_groq_credentials",
     "normalize_ai_text",
+    "normalize_ai_response",
     "markdown_to_safe_html",
     "format_interview_evaluation",
     "safe_ai_error_message",

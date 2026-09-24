@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Learning Roadmap — EDUNOVA AI{% endblock %}
 
@@ -14,16 +15,20 @@
 <article class="glass-card mb-2">
   <form method="post" data-loading class="form-row" style="align-items:end;">
     {{ gen_form.hidden_tag() }}
+    {{ form_errors(gen_form) }}
     <div class="form-group mb-0" style="flex:1;">
       <label class="form-label" for="role_id">Generate for role</label>
       <select class="form-select" id="role_id" name="role_id" required>
+        {% if not roles %}
+          <option value="">No roles available — ask an admin to seed the catalog</option>
+        {% endif %}
         {% for r in roles %}
           <option value="{{ r.id }}" {% if active and active.role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="form-group mb-0">
-      <button type="submit" class="btn btn-ai" name="generate" value="1" data-loading-text="Generating…">Generate / refresh</button>
+      <button type="submit" class="btn btn-ai" name="generate" value="1" data-loading-text="Generating…" {% if not roles %}disabled{% endif %}>Generate / refresh</button>
     </div>
   </form>
 </article>

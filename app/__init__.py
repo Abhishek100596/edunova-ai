@@ -82,24 +82,92 @@ def create_app(config_object=None) -> Flask:
 
 
 def _register_error_handlers(app: Flask) -> None:
+    from flask import jsonify, render_template, request
+
+    def _wants_json() -> bool:
+        if request.path.startswith("/api/"):
+            return True
+        best = request.accept_mimetypes.best_match(["application/json", "text/html"])
+        return best == "application/json" and (
+            request.accept_mimetypes[best]
+            > request.accept_mimetypes["text/html"]
+        )
+
+    def _error_response(code: int, title: str, message: str):
+        if _wants_json():
+            return jsonify({"error": title, "message": message, "status": code}), code
+        template = f"errors/{code}.html"
+        try:
+            return render_template(template, message=message), code
+        except Exception:  # noqa: BLE001
+            # Fall back to generic pages for codes without dedicated templates
+            generic = "errors/500.html" if code >= 500 else "errors/404.html"
+            return render_template(generic, message=message), code
+
+    @app.errorhandler(400)
+    def bad_request(e):
+        return _error_response(
+            400,
+            "Bad request",
+            "That request could not be understood. Please check your input and try again.",
+        )
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        return _error_response(
+            401,
+            "Unauthorized",
+            "Please sign in to continue.",
+        )
+
     @app.errorhandler(403)
     def forbidden(e):
-        from flask import render_template
-
-        return render_template("errors/403.html"), 403
+        return _error_response(
+            403,
+            "Forbidden",
+            "You do not have permission to view this page.",
+        )
 
     @app.errorhandler(404)
     def not_found(e):
-        from flask import render_template
+        return _error_response(
+            404,
+            "Not found",
+            "That page or resource was not found.",
+        )
 
-        return render_template("errors/404.html"), 404
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return _error_response(
+            405,
+            "Method not allowed",
+            "This action is not allowed for that URL.",
+        )
+
+    @app.errorhandler(413)
+    def payload_too_large(e):
+        return _error_response(
+            413,
+            "File too large",
+            "The uploaded file is too large. Please try a smaller PDF or DOCX.",
+        )
+
+    @app.errorhandler(422)
+    def unprocessable(e):
+        return _error_response(
+            422,
+            "Unprocessable",
+            "We could not process that submission. Please review your input.",
+        )
 
     @app.errorhandler(500)
     def server_error(e):
-        from flask import render_template
-
-        return render_template("errors/500.html"), 500
-
+        app.logger.exception("Unhandled server error")
+        return _error_response(
+            500,
+            "Server error",
+            "Something went wrong on our side. Your saved profile is safe — please try again.",
+        )
 
 def _ensure_upload_folder(app: Flask) -> None:
     upload = app.config.get("UPLOAD_FOLDER")

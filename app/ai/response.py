@@ -171,6 +171,28 @@ def normalize_ai_text(raw: Any) -> str:
     return text.strip()
 
 
+def normalize_ai_response(raw: Any) -> dict[str, Any]:
+    """
+    Central AI response normalization for all GenAI features.
+
+    Returns a stable internal shape:
+      { "text": str, "html": str, "ok": bool }
+    Accepts strings, dicts, lists, nested provider payloads, and SDK-like objects.
+    """
+    text = normalize_ai_text(raw)
+    if not text:
+        return {
+            "text": "",
+            "html": "",
+            "ok": False,
+        }
+    return {
+        "text": text,
+        "html": markdown_to_safe_html(text),
+        "ok": True,
+    }
+
+
 def format_interview_evaluation(data: dict[str, Any]) -> str:
     """Render structured interview evaluation for students."""
     score = data.get("score")

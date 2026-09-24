@@ -63,6 +63,8 @@ def generate_roadmap(
     Create a LearningRoadmap + LearningTask rows from skill gaps for a role.
     Prefaces with role template stages when available.
     """
+    if role is None or getattr(role, "id", None) is None:
+        raise ValueError("A valid career role is required to generate a roadmap.")
     analysis = analyze_skill_gaps(profile, role)
 
     if replace_existing:

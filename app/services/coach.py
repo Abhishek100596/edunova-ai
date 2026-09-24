@@ -429,20 +429,36 @@ def ask_coach(
         fallback_used = False
         status_message = ""
     else:
-        result = complete_with_fallback(
-            current_app.config,
-            grounded_message,
-            system=COACH_SYSTEM_PROMPT,
-            context=context,
-            history=history,
-        )
-        reply = normalize_ai_text(result["reply"])
-        provider_name = result["provider"]
-        fallback_used = bool(result.get("fallback_used"))
-        status_message = result.get("status_message") or ""
-        # If cloud failed into local, enrich with smarter local reply
-        if provider_name in {"local", "local-demo"} and fallback_used:
+        try:
+            result = complete_with_fallback(
+                current_app.config,
+                grounded_message,
+                system=COACH_SYSTEM_PROMPT,
+                context=context,
+                history=history,
+            )
+            reply = normalize_ai_text(result.get("reply") if isinstance(result, dict) else result)
+            provider_name = (
+                result.get("provider", "local") if isinstance(result, dict) else "local"
+            )
+            fallback_used = bool(
+                result.get("fallback_used") if isinstance(result, dict) else False
+            )
+            status_message = (
+                (result.get("status_message") or "") if isinstance(result, dict) else ""
+            )
+            # If cloud failed into local, enrich with smarter local reply
+            if provider_name in {"local", "local-demo"} and fallback_used:
+                reply = normalize_ai_text(_local_smart_reply(message, context, history))
+        except Exception:  # noqa: BLE001
+            current_app.logger.exception("AI coach provider failed; using local fallback")
             reply = normalize_ai_text(_local_smart_reply(message, context, history))
+            provider_name = "local"
+            fallback_used = True
+            status_message = (
+                "The AI assistant is temporarily unavailable. "
+                "Showing guidance from your saved EduNova profile instead."
+            )
 
     if persist:
         last_user = (

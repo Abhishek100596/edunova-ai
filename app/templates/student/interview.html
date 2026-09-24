@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Interview Prep — EDUNOVA AI{% endblock %}
 
@@ -16,6 +17,7 @@
     <div class="card-header"><h3>Start a new session</h3></div>
     <form method="post" data-loading>
       {{ start_form.hidden_tag() }}
+      {{ form_errors(start_form) }}
       <div class="form-group">
         {{ start_form.interview_type.label(class_="form-label") }}
         {{ start_form.interview_type(class_="form-select") }}
@@ -52,6 +54,7 @@
   </div>
   <div class="progress-track mb-2"><div class="progress-fill" style="width: {{ ((detail.answered_count or 0) / (detail.question_count or detail.questions|length or 1) * 100) }}%"></div></div>
 
+  {{ form_errors(answer_form) }}
   {% for q in detail.questions %}
     <div class="card-solid mb-2">
       <p style="color:var(--text-primary);"><strong>Question {{ q.number or (q.order_index + 1) }} of {{ detail.question_count or detail.questions|length }}.</strong> {{ q.prompt }}</p>
@@ -61,16 +64,19 @@
         {% if q.answer.text or q.answer.answer_text %}
           <p class="form-hint mt-1 mb-0">Your answer: {{ q.answer.text or q.answer.answer_text }}</p>
         {% endif %}
-      {% else %}
+      {% elif detail.current_question_id is defined and detail.current_question_id == q.id %}
+        {# One editable question at a time — avoids multi-form confusion. #}
         <form method="post" data-loading>
           {{ answer_form.hidden_tag() }}
           <input type="hidden" name="question_id" value="{{ q.id }}">
           <div class="form-group">
             <label class="form-label" for="answer_text_{{ q.id }}">Your answer</label>
-            <textarea class="form-textarea" id="answer_text_{{ q.id }}" name="answer_text" required rows="5" placeholder="Explain your approach clearly. Use only experience you actually have."></textarea>
+            <textarea class="form-textarea" id="answer_text_{{ q.id }}" name="answer_text" required rows="5" minlength="10" maxlength="5000" placeholder="Explain your approach clearly. Use only experience you actually have."></textarea>
           </div>
           <button type="submit" class="btn btn-primary btn-sm" name="answer" value="1" data-loading-text="Evaluating…">Submit answer</button>
         </form>
+      {% else %}
+        <p class="text-muted mb-0" style="font-size:0.85rem;">Answer earlier questions first to unlock this one.</p>
       {% endif %}
     </div>
   {% endfor %}

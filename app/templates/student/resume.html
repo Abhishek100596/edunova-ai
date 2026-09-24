@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Resume Intelligence — EDUNOVA AI{% endblock %}
 
@@ -22,6 +23,7 @@
     <div class="card-header"><h3>Upload resume</h3></div>
     <form method="post" enctype="multipart/form-data" data-loading>
       {{ upload_form.hidden_tag() }}
+      {{ form_errors(upload_form) }}
       <div class="form-group">
         {{ upload_form.resume.label(class_="form-label") }}
         {{ upload_form.resume(class_="form-control") }}
@@ -35,6 +37,7 @@
     <div class="card-header"><h3>Match a job description</h3></div>
     <form method="post" data-loading>
       {{ jd_form.hidden_tag() }}
+      {{ form_errors(jd_form) }}
       <div class="form-group">
         {{ jd_form.title.label(class_="form-label") }}
         {{ jd_form.title(class_="form-control") }}
@@ -112,7 +115,7 @@
     <div class="card-header"><h3>Detected skills</h3></div>
     {% if skills_found %}
       {% for s in skills_found %}
-        <span class="skill-pill gap-have">{{ s.name if s.name is defined else s.get('name', s) }}</span>
+        <span class="skill-pill gap-have">{% if s is mapping %}{{ s.name or s.skill or s.skill_name or s }}{% elif s is string %}{{ s }}{% else %}{{ s }}{% endif %}</span>
       {% endfor %}
     {% else %}
       <p class="text-muted mb-0">No catalog skills matched yet.</p>

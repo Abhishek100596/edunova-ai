@@ -165,10 +165,21 @@
   }
 
   /* ---------- Form loading ---------- */
+  function resetLoadingButtons(scope) {
+    var root = scope || document;
+    root.querySelectorAll("form[data-loading] button.is-loading, form[data-loading] .btn.is-loading").forEach(function (btn) {
+      btn.classList.remove("is-loading");
+      btn.disabled = false;
+      if (btn.dataset.originalHtml) {
+        btn.innerHTML = btn.dataset.originalHtml;
+      }
+    });
+  }
+
   function initForms() {
     document.querySelectorAll("form[data-loading]").forEach(function (form) {
       form.addEventListener("submit", function () {
-        var btn = form.querySelector('button[type="submit"], .btn-primary');
+        var btn = form.querySelector('button[type="submit"], .btn-primary, .btn-ai');
         if (!btn) return;
         btn.classList.add("is-loading");
         btn.disabled = true;
@@ -177,6 +188,51 @@
           btn.dataset.originalHtml = btn.innerHTML;
         }
         btn.innerHTML = label;
+      });
+    });
+    // Restore buttons if the browser restores a cached page after a failed nav
+    window.addEventListener("pageshow", function () {
+      resetLoadingButtons(document);
+    });
+  }
+
+  /* ---------- CSRF-aware fetch for JSON APIs ---------- */
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute("content") : "";
+  }
+
+  function apiFetch(url, options) {
+    options = options || {};
+    var headers = Object.assign({}, options.headers || {});
+    var token = csrfToken();
+    if (token) {
+      headers["X-CSRFToken"] = token;
+      headers["X-CSRF-Token"] = token;
+    }
+    if (options.body && typeof options.body === "object" && !(options.body instanceof FormData)) {
+      headers["Content-Type"] = headers["Content-Type"] || "application/json";
+      options.body = JSON.stringify(options.body);
+    }
+    options.headers = headers;
+    options.credentials = options.credentials || "same-origin";
+    return fetch(url, options).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          var err = new Error((data && (data.error || data.message)) || ("Request failed (" + res.status + ")"));
+          err.status = res.status;
+          err.data = data;
+          throw err;
+        }
+        return data;
+      }).catch(function (parseErr) {
+        if (parseErr.status) throw parseErr;
+        if (!res.ok) {
+          var err2 = new Error("Request failed (" + res.status + ")");
+          err2.status = res.status;
+          throw err2;
+        }
+        throw parseErr;
       });
     });
   }
@@ -368,5 +424,8 @@
     createChart: createChart,
     chartColors: chartColors,
     baseChartOptions: baseChartOptions,
+    csrfToken: csrfToken,
+    apiFetch: apiFetch,
+    resetLoadingButtons: resetLoadingButtons,
   };
 })();

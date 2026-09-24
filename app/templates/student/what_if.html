@@ -1,5 +1,6 @@
 {% extends "layouts/app.html" %}
 {% from "components/evidence_badge.html" import compat_note %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}What-If Simulator — EDUNOVA AI{% endblock %}
 
@@ -19,6 +20,7 @@
 <article class="glass-card mt-2">
   <form method="post" data-loading>
     {{ form.hidden_tag() }}
+    {{ form_errors(form) }}
     <div class="form-group">
       {{ form.scenario.label(class_="form-label") }}
       {{ form.scenario(class_="form-control") }}
