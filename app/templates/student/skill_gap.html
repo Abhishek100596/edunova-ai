@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Skill Gap — EDUNOVA AI{% endblock %}
 
@@ -14,6 +15,7 @@
 <article class="glass-card mb-2">
   <form method="post" data-loading class="form-row" style="align-items:end;">
     {{ form.hidden_tag() }}
+    {{ form_errors(form) }}
     <div class="form-group mb-0" style="flex:1;">
       <label class="form-label" for="role_id">Target role</label>
       <select class="form-select" id="role_id" name="role_id" required>

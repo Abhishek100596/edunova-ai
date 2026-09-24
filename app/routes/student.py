@@ -24,8 +24,10 @@ from app.extensions import db
 from app.forms import (
     AddStudentSkillForm,
     AddTrackedCompanyForm,
+    CertificationForm,
     CoachForm,
     GitHubProjectForm,
+    InternshipForm,
     InterviewAnswerForm,
     InterviewStartForm,
     JDMatchForm,
@@ -308,9 +310,9 @@ def profile():
     form = ProfileForm()
     skill_form = AddStudentSkillForm()
 
-    if request.args.get("remove_skill"):
+    if request.method == "POST" and "remove_skill" in request.form:
         try:
-            sid = int(request.args.get("remove_skill"))
+            sid = int(request.form.get("skill_id") or 0)
         except (TypeError, ValueError):
             sid = None
         if sid:
@@ -855,6 +857,8 @@ def projects():
     profile = ensure_student_profile()
     form = ProjectForm()
     github_form = GitHubProjectForm()
+    cert_form = CertificationForm()
+    intern_form = InternshipForm()
 
     if request.method == "POST" and "analyze_github" in request.form:
         if github_form.validate_on_submit():
@@ -895,7 +899,11 @@ def projects():
         else:
             flash("Enter a valid public GitHub repository URL.", "warning")
 
-    elif form.validate_on_submit():
+    elif (
+        form.validate_on_submit()
+        and "add_cert" not in request.form
+        and "add_intern" not in request.form
+    ):
         title = (form.title.data or "").strip()
         url = (form.url.data or "").strip()
         if not title and url:
@@ -952,6 +960,35 @@ def projects():
             flash("Project added.", "success")
             return redirect(url_for("student.projects"))
 
+    if cert_form.validate_on_submit() and "add_cert" in request.form:
+        db.session.add(
+            Certification(
+                student_id=profile.id,
+                name=cert_form.name.data.strip(),
+                issuer=(cert_form.issuer.data or "").strip() or None,
+                credential_id=(cert_form.credential_id.data or "").strip() or None,
+                url=(cert_form.url.data or "").strip() or None,
+            )
+        )
+        db.session.commit()
+        flash("Certification added to your profile.", "success")
+        return redirect(url_for("student.projects"))
+
+    if intern_form.validate_on_submit() and "add_intern" in request.form:
+        db.session.add(
+            Internship(
+                student_id=profile.id,
+                company=intern_form.company.data.strip(),
+                title=intern_form.title.data.strip(),
+                description=(intern_form.description.data or "").strip() or None,
+                location=(intern_form.location.data or "").strip() or None,
+                is_current=bool(intern_form.is_current.data),
+            )
+        )
+        db.session.commit()
+        flash("Internship added to your profile.", "success")
+        return redirect(url_for("student.projects"))
+
     items = (
         Project.query.filter_by(student_id=profile.id)
         .order_by(Project.created_at.desc())
@@ -995,6 +1032,8 @@ def projects():
         "student/projects.html",
         form=form,
         github_form=github_form,
+        cert_form=cert_form,
+        intern_form=intern_form,
         projects=items,
         certifications=certs,
         internships=interns,

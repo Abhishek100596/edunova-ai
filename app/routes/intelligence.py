@@ -256,30 +256,50 @@ def what_if():
     ]
 
     if form.validate_on_submit():
-        if form.scenario.data == "skill_level":
-            sim = _try_import("what_if", "simulate_skill_level_change")
-            if sim is None:
-                _flash_import_error("What-if")
-            elif not form.skill_name.data:
-                flash("Provide a skill name for this scenario.", "warning")
-            else:
-                try:
+        scenario = form.scenario.data
+        try:
+            if scenario == "skill_level":
+                sim = _try_import("what_if", "simulate_skill_level_change")
+                if sim is None:
+                    _flash_import_error("What-if")
+                elif not form.skill_name.data:
+                    flash("Provide a skill name for this scenario.", "warning")
+                else:
                     result = sim(
                         profile,
                         form.skill_name.data.strip(),
                         int(form.new_level.data or 3),
                     )
-                except Exception:  # noqa: BLE001
-                    flash("Simulation failed. Please check your inputs and try again.", "danger")
-        else:
-            sim = _try_import("what_if", "simulate_extra_projects")
-            if sim is None:
-                _flash_import_error("What-if")
-            else:
-                try:
+            elif scenario == "extra_projects":
+                sim = _try_import("what_if", "simulate_extra_projects")
+                if sim is None:
+                    _flash_import_error("What-if")
+                else:
                     result = sim(profile, int(form.extra_projects.data or 1))
-                except Exception:  # noqa: BLE001
-                    flash("Simulation failed. Please check your inputs and try again.", "danger")
+            elif scenario == "cgpa":
+                sim = _try_import("what_if", "simulate_cgpa_change")
+                if sim is None:
+                    _flash_import_error("What-if")
+                elif form.new_cgpa.data is None:
+                    flash("Enter a hypothetical CGPA for this scenario.", "warning")
+                else:
+                    result = sim(profile, float(form.new_cgpa.data))
+            elif scenario == "extra_internship":
+                sim = _try_import("what_if", "simulate_extra_internship")
+                if sim is None:
+                    _flash_import_error("What-if")
+                else:
+                    result = sim(profile, 1)
+            elif scenario == "extra_certification":
+                sim = _try_import("what_if", "simulate_extra_certification")
+                if sim is None:
+                    _flash_import_error("What-if")
+                else:
+                    result = sim(profile, 1)
+            else:
+                flash("Unknown simulation scenario.", "warning")
+        except Exception:  # noqa: BLE001
+            flash("Simulation failed. Please check your inputs and try again.", "danger")
 
         if result:
             try:

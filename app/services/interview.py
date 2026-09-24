@@ -414,6 +414,13 @@ def complete_session(
     if student_id is not None and session.student_id != student_id:
         raise PermissionError("You can only complete your own interview session.")
 
+    unanswered = [q for q in (session.questions or []) if q.answer is None]
+    if unanswered:
+        raise ValueError(
+            f"Answer all questions before completing "
+            f"({len(unanswered)} remaining)."
+        )
+
     scores: list[float] = []
     for q in session.questions or []:
         if q.answer is not None and q.answer.score is not None:

@@ -1,5 +1,6 @@
 {% extends "layouts/app.html" %}
 {% from "components/evidence_badge.html" import compat_note %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Career Comparison — EDUNOVA AI{% endblock %}
 
@@ -19,6 +20,7 @@
 <article class="glass-card mt-2">
   <form method="post" data-loading>
     {{ form.hidden_tag() }}
+    {{ form_errors(form) }}
     <div class="grid grid-2">
       <div class="form-group">
         <label class="form-label" for="role_id_a">Career A</label>

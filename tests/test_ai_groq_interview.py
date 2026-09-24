@@ -265,6 +265,19 @@ def test_interview_session_and_ownership(app):
         with pytest.raises(PermissionError):
             interview_svc.submit_answer(qid, "hack", student_id=other_profile.id)
 
+        # Answer remaining questions before complete is allowed
+        detail2 = interview_svc.session_detail(sess.id, student_id=profile.id)
+        while detail2.get("current_question_id") and detail2["status"] == "in_progress":
+            cq = detail2["current_question_id"]
+            interview_svc.submit_answer(
+                cq,
+                "I structured the answer with context, action, and measurable result using skills on my profile.",
+                student_id=profile.id,
+            )
+            detail2 = interview_svc.session_detail(sess.id, student_id=profile.id)
+            if detail2["answered_count"] >= detail2["question_count"]:
+                break
+
         interview_svc.complete_session(sess.id, student_id=profile.id)
         done = db.session.get(InterviewSession, sess.id)
         assert done.status == "completed"

@@ -251,3 +251,96 @@ def simulate_extra_projects(profile: StudentProfile, n: int) -> dict[str, Any]:
             "Scenario simulation only — profile and database were not modified."
         ),
     }
+
+
+def _finalize_scenario(
+    baseline: dict[str, Any],
+    features: dict[str, float],
+    *,
+    scenario: str,
+    note: str,
+    **extra: Any,
+) -> dict[str, Any]:
+    result = _recompute_from_features(features)
+    result["readiness_components"]["interview"] = baseline["readiness_components"][
+        "interview"
+    ]
+    w = {
+        "academic": 0.25,
+        "skill": 0.25,
+        "project": 0.15,
+        "experience": 0.15,
+        "certification": 0.10,
+        "interview": 0.10,
+    }
+    parts = result["readiness_components"]
+    result["overall_readiness"] = round(
+        sum(parts[k] * w[k] for k in w) / sum(w.values()), 2
+    )
+    payload = {
+        "label": SCENARIO_LABEL,
+        "scenario": scenario,
+        "note": note,
+        "baseline": baseline,
+        "simulated": result,
+        "delta_overall_readiness": round(
+            result["overall_readiness"] - baseline["overall_readiness"], 2
+        ),
+        "delta_placement_probability": round(
+            result["placement_probability_estimate"]
+            - baseline["placement_probability_estimate"],
+            4,
+        ),
+        "disclaimer": (
+            "Scenario simulation only — profile and database were not modified."
+        ),
+    }
+    payload.update(extra)
+    return payload
+
+
+def simulate_cgpa_change(profile: StudentProfile, new_cgpa: float) -> dict[str, Any]:
+    """Simulate a different CGPA without writing to the database."""
+    baseline = _base_snapshot(profile)
+    features = deepcopy(baseline["features"])
+    cgpa = max(0.0, min(10.0, float(new_cgpa)))
+    features["cgpa"] = cgpa
+    return _finalize_scenario(
+        baseline,
+        features,
+        scenario="cgpa_change",
+        note=f"Simulated changing CGPA to {cgpa:.2f}.",
+        new_cgpa=cgpa,
+    )
+
+
+def simulate_extra_internship(profile: StudentProfile, n: int = 1) -> dict[str, Any]:
+    """Simulate adding internship(s) on the feature vector only."""
+    baseline = _base_snapshot(profile)
+    features = deepcopy(baseline["features"])
+    n = max(1, min(5, int(n)))
+    features["internship_count"] = float(features.get("internship_count", 0.0) + n)
+    return _finalize_scenario(
+        baseline,
+        features,
+        scenario="extra_internship",
+        note=f"Simulated adding {n} internship(s).",
+        extra_internships=n,
+    )
+
+
+def simulate_extra_certification(profile: StudentProfile, n: int = 1) -> dict[str, Any]:
+    """Simulate adding certification(s) on the feature vector only."""
+    baseline = _base_snapshot(profile)
+    features = deepcopy(baseline["features"])
+    n = max(1, min(5, int(n)))
+    features["certification_count"] = float(
+        features.get("certification_count", 0.0) + n
+    )
+    return _finalize_scenario(
+        baseline,
+        features,
+        scenario="extra_certification",
+        note=f"Simulated adding {n} certification(s).",
+        extra_certifications=n,
+    )

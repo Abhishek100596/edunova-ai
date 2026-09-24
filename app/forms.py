@@ -230,6 +230,9 @@ class WhatIfForm(FlaskForm):
         choices=[
             ("skill_level", "Change a skill level"),
             ("extra_projects", "Add extra projects"),
+            ("cgpa", "Improve CGPA"),
+            ("extra_internship", "Add an internship"),
+            ("extra_certification", "Add a certification"),
         ],
         validators=[DataRequired()],
     )
@@ -239,6 +242,9 @@ class WhatIfForm(FlaskForm):
     )
     extra_projects = IntegerField(
         "Extra projects", validators=[Optional(), NumberRange(1, 10)]
+    )
+    new_cgpa = FloatField(
+        "Hypothetical CGPA (0–10)", validators=[Optional(), NumberRange(0, 10)]
     )
     submit = SubmitField("Run simulation")
 
@@ -317,3 +323,20 @@ class AddTrackedCompanyForm(FlaskForm):
     )
     notes = TextAreaField("Notes", validators=[Optional(), Length(0, 2000)])
     submit = SubmitField("Save company")
+
+
+class CertificationForm(FlaskForm):
+    name = StringField("Certification name", validators=[DataRequired(), Length(1, 200)])
+    issuer = StringField("Issuer", validators=[Optional(), Length(0, 200)])
+    credential_id = StringField("Credential ID", validators=[Optional(), Length(0, 120)])
+    url = StringField("URL", validators=[Optional(), Length(0, 500)])
+    submit = SubmitField("Add certification")
+
+
+class InternshipForm(FlaskForm):
+    company = StringField("Company", validators=[DataRequired(), Length(1, 200)])
+    title = StringField("Role / title", validators=[DataRequired(), Length(1, 200)])
+    description = TextAreaField("Description", validators=[Optional(), Length(0, 5000)])
+    location = StringField("Location", validators=[Optional(), Length(0, 120)])
+    is_current = BooleanField("Currently ongoing")
+    submit = SubmitField("Add internship")

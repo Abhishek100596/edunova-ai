@@ -82,10 +82,16 @@
   {% endfor %}
 
   {% if detail.status == 'in_progress' %}
-  <form method="post" data-loading>
+  {% set remaining = (detail.question_count or detail.questions|length) - (detail.answered_count or 0) %}
+  {% if remaining > 0 %}
+  <p class="form-hint mb-1">Answer the remaining {{ remaining }} question{{ 's' if remaining != 1 else '' }} before completing.</p>
+  <button type="button" class="btn btn-ai" disabled>Complete interview</button>
+  {% else %}
+  <form method="post" action="{{ url_for('student.interview', session_id=detail.id) }}" data-loading>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-ai" name="complete" value="1" data-loading-text="Completing…">Complete interview</button>
   </form>
+  {% endif %}
   {% else %}
   <a href="{{ url_for('student.interview_results', session_id=detail.id) }}" class="btn btn-ai">View results</a>
   {% endif %}

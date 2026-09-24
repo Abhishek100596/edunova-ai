@@ -1,4 +1,5 @@
 {% extends "layouts/app.html" %}
+{% from "components/form_errors.html" import form_errors %}
 
 {% block title %}Projects — EDUNOVA AI{% endblock %}
 
@@ -16,6 +17,7 @@
     <div class="card-header"><h3>Analyze GitHub repository</h3></div>
     <form method="post" data-loading>
       {{ github_form.hidden_tag() }}
+      {{ form_errors(github_form) }}
       <div class="form-group">
         {{ github_form.github_url.label(class_="form-label") }}
         {{ github_form.github_url(class_="form-control", placeholder="https://github.com/owner/repo") }}
@@ -33,6 +35,7 @@
     <div class="card-header"><h3>Add project manually</h3></div>
     <form method="post" data-loading>
       {{ form.hidden_tag() }}
+      {{ form_errors(form) }}
       <div class="form-group">{{ form.title.label(class_="form-label") }}{{ form.title(class_="form-control") }}</div>
       <div class="form-group">{{ form.description.label(class_="form-label") }}{{ form.description(class_="form-textarea") }}</div>
       <div class="form-row">
@@ -41,6 +44,34 @@
       </div>
       <div class="form-group">{{ form.url.label(class_="form-label") }}{{ form.url(class_="form-control", placeholder="https://github.com/… or project link") }}</div>
       {{ form.submit(class_="btn btn-primary", **{"data-loading-text": "Saving…"}) }}
+    </form>
+  </article>
+</div>
+
+<div class="grid grid-2 mb-2">
+  <article class="glass-card">
+    <div class="card-header"><h3>Add internship</h3></div>
+    <form method="post" data-loading>
+      {{ intern_form.hidden_tag() }}
+      {{ form_errors(intern_form) }}
+      <div class="form-group">{{ intern_form.company.label(class_="form-label") }}{{ intern_form.company(class_="form-control") }}</div>
+      <div class="form-group">{{ intern_form.title.label(class_="form-label") }}{{ intern_form.title(class_="form-control") }}</div>
+      <div class="form-group">{{ intern_form.description.label(class_="form-label") }}{{ intern_form.description(class_="form-textarea", rows="2") }}</div>
+      <div class="form-group">{{ intern_form.location.label(class_="form-label") }}{{ intern_form.location(class_="form-control") }}</div>
+      <label class="form-check mb-2">{{ intern_form.is_current() }} {{ intern_form.is_current.label.text }}</label>
+      <button type="submit" class="btn btn-primary" name="add_intern" value="1" data-loading-text="Saving…">{{ intern_form.submit.label.text }}</button>
+    </form>
+  </article>
+  <article class="glass-card">
+    <div class="card-header"><h3>Add certification</h3></div>
+    <form method="post" data-loading>
+      {{ cert_form.hidden_tag() }}
+      {{ form_errors(cert_form) }}
+      <div class="form-group">{{ cert_form.name.label(class_="form-label") }}{{ cert_form.name(class_="form-control") }}</div>
+      <div class="form-group">{{ cert_form.issuer.label(class_="form-label") }}{{ cert_form.issuer(class_="form-control") }}</div>
+      <div class="form-group">{{ cert_form.credential_id.label(class_="form-label") }}{{ cert_form.credential_id(class_="form-control") }}</div>
+      <div class="form-group">{{ cert_form.url.label(class_="form-label") }}{{ cert_form.url(class_="form-control") }}</div>
+      <button type="submit" class="btn btn-primary" name="add_cert" value="1" data-loading-text="Saving…">{{ cert_form.submit.label.text }}</button>
     </form>
   </article>
 </div>
@@ -159,6 +190,11 @@
       {% endfor %}
     </ul>
   </article>
+  {% else %}
+  <article class="glass-card empty-state">
+    <h3>No internships yet</h3>
+    <p>Add internship evidence above to improve readiness and coach context.</p>
+  </article>
   {% endif %}
   {% if certifications %}
   <article class="glass-card">
@@ -169,7 +205,23 @@
       {% endfor %}
     </ul>
   </article>
+  {% else %}
+  <article class="glass-card empty-state">
+    <h3>No certifications yet</h3>
+    <p>Add certifications above so readiness and career fit can use them.</p>
+  </article>
   {% endif %}
+</div>
+{% else %}
+<div class="grid grid-2">
+  <article class="glass-card empty-state">
+    <h3>No internships yet</h3>
+    <p>Add internship evidence above to improve readiness and coach context.</p>
+  </article>
+  <article class="glass-card empty-state">
+    <h3>No certifications yet</h3>
+    <p>Add certifications above so readiness and career fit can use them.</p>
+  </article>
 </div>
 {% endif %}
 {% endblock %}
